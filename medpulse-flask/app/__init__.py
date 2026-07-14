@@ -6,6 +6,7 @@ from app.utils.db import Database
 from app.models.user import UserModel
 from app.routes.auth import auth_bp
 from app.routes.fact_check import fact_check_bp
+from app.routes.drug import drug_bp
 
 def create_app():
     app = Flask(__name__)
@@ -26,6 +27,7 @@ def create_app():
     # 註冊路由藍圖
     app.register_blueprint(auth_bp)
     app.register_blueprint(fact_check_bp)
+    app.register_blueprint(drug_bp)
 
     # 健康檢查 API
     @app.route("/health", methods=["GET"])
