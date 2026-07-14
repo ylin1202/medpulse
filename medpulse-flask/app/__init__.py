@@ -4,9 +4,11 @@ from flask_jwt_extended import JWTManager
 from config import Config
 from app.utils.db import Database
 from app.models.user import UserModel
+from app.models.favorite import FavoriteModel
 from app.routes.auth import auth_bp
 from app.routes.fact_check import fact_check_bp
 from app.routes.drug import drug_bp
+from app.routes.favorite import favorite_bp
 
 def create_app():
     app = Flask(__name__)
@@ -28,6 +30,7 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(fact_check_bp)
     app.register_blueprint(drug_bp)
+    app.register_blueprint(favorite_bp)
 
     # 健康檢查 API
     @app.route("/health", methods=["GET"])
@@ -42,6 +45,7 @@ def create_app():
     with app.app_context():
         try:
             UserModel.create_table()
+            FavoriteModel.create_table()
             print("Database connection pool initialized & User table checked.")
         except Exception as e:
             print(f"Database initialization skipped or failed: {e}")
