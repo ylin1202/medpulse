@@ -10,7 +10,7 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    # 允許跨域請求 (供 Flutter 前端呼叫)
+    # 允許跨域請求
     CORS(app)
 
     # 初始化 JWTManager
@@ -45,8 +45,3 @@ def create_app():
             print(f"Database initialization skipped or failed: {e}")
 
     return app
-
-app = create_app()
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5001, debug=True)
