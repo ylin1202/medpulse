@@ -9,6 +9,7 @@ from app.routes.auth import auth_bp
 from app.routes.fact_check import fact_check_bp
 from app.routes.drug import drug_bp
 from app.routes.favorite import favorite_bp
+from app.routes.pharmacy import pharmacy_bp
 
 def create_app():
     app = Flask(__name__)
@@ -31,6 +32,7 @@ def create_app():
     app.register_blueprint(fact_check_bp)
     app.register_blueprint(drug_bp)
     app.register_blueprint(favorite_bp)
+    app.register_blueprint(pharmacy_bp)
 
     # 健康檢查 API
     @app.route("/health", methods=["GET"])
