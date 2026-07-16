@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'map/presentation/pharmacy_map_screen.dart';
+
+
 /// 應用程式底部導覽列 (Bottom Navigation) 主頁面
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -14,7 +17,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   // 5 個核心 Tab 頁面清單 
   final List<Widget> _screens = [
     const _PlaceholderScreen(title: 'Fact-Check Hub', icon: Icons.verified_user_outlined),
-    const _PlaceholderScreen(title: 'Pharmacy Map', icon: Icons.map_outlined),
+    const PharmacyMapScreen(),
     const _PlaceholderScreen(title: 'Drug Finder', icon: Icons.medication_outlined),
     const _PlaceholderScreen(title: 'MedPulse AI Assistant', icon: Icons.smart_toy_outlined),
     const _PlaceholderScreen(title: 'Profile & Bookmarks', icon: Icons.person_outline),

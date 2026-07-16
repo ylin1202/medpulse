@@ -11,7 +11,7 @@ class ApiClient {
 
   // 預設連線至本機 Flask API (模擬器連線 localhost 需使用 10.0.2.2 或 127.0.0.1)
   // iOS 模擬器可直接用 http://127.0.0.1:5001
-  static const String baseUrl = 'http://127.0.0.1:5001/api/v1';
+  static const String baseUrl = 'http://localhost:5001/api/v1';
 
   ApiClient._internal() {
     dio = Dio(
