@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'map/presentation/pharmacy_map_screen.dart';
 import 'drug/presentation/drug_search_screen.dart';
 import 'fact_check/presentation/fact_check_screen.dart';
+import 'ai_agent/presentation/ai_agent_screen.dart';
 
 /// 應用程式底部導覽列 (Bottom Navigation) 主頁面
 class MainNavigationScreen extends StatefulWidget {
@@ -21,7 +22,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     const FactCheckScreen(),
     const PharmacyMapScreen(),
     const DrugSearchScreen(), 
-    const _PlaceholderScreen(title: 'MedPulse AI Assistant', icon: Icons.smart_toy_outlined),
+    const AiAgentScreen(),
     const _PlaceholderScreen(title: 'Profile & Bookmarks', icon: Icons.person_outline),
   ];
 
