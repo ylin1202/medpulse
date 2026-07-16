@@ -1,6 +1,7 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
+from app.extensions import mail
 from config import Config
 from app.utils.db import Database
 from app.models.user import UserModel
@@ -11,6 +12,7 @@ from app.routes.drug import drug_bp
 from app.routes.favorite import favorite_bp
 from app.routes.pharmacy import pharmacy_bp
 
+
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
@@ -20,6 +22,9 @@ def create_app():
 
     # 初始化 JWTManager
     JWTManager(app)
+    
+    # 初始化 Flask-Mail (會去讀 app.config['MAIL_SERVER'] 等設定)
+    mail.init_app(app)
 
     # 初始化 DB 連線池
     Database.init_pool(app)

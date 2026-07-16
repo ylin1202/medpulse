@@ -6,13 +6,13 @@ class UserModel:
 
     @staticmethod
     def create_table():
-        """建立 users 資料表 (如果不存在)"""
         query = """
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
             username VARCHAR(50) UNIQUE NOT NULL,
             email VARCHAR(100) UNIQUE NOT NULL,
             password_hash VARCHAR(255) NOT NULL,
+            is_verified BOOLEAN DEFAULT FALSE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         """
@@ -41,3 +41,5 @@ class UserModel:
     def verify_password(stored_password_hash, provided_password):
         """驗證密碼是否正確"""
         return check_password_hash(stored_password_hash, provided_password)
+    
+    
