@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
+// 匯入地圖與藥物搜尋頁面
 import 'map/presentation/pharmacy_map_screen.dart';
-
+import 'drug/presentation/drug_search_screen.dart';
 
 /// 應用程式底部導覽列 (Bottom Navigation) 主頁面
 class MainNavigationScreen extends StatefulWidget {
@@ -15,10 +16,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
 
   // 5 個核心 Tab 頁面清單 
-  final List<Widget> _screens = [
+  late final List<Widget> _screens = [
     const _PlaceholderScreen(title: 'Fact-Check Hub', icon: Icons.verified_user_outlined),
     const PharmacyMapScreen(),
-    const _PlaceholderScreen(title: 'Drug Finder', icon: Icons.medication_outlined),
+    const DrugSearchScreen(), 
     const _PlaceholderScreen(title: 'MedPulse AI Assistant', icon: Icons.smart_toy_outlined),
     const _PlaceholderScreen(title: 'Profile & Bookmarks', icon: Icons.person_outline),
   ];
