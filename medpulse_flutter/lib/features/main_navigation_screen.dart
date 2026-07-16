@@ -5,6 +5,7 @@ import 'map/presentation/pharmacy_map_screen.dart';
 import 'drug/presentation/drug_search_screen.dart';
 import 'fact_check/presentation/fact_check_screen.dart';
 import 'ai_agent/presentation/ai_agent_screen.dart';
+import 'profile/presentation/profile_screen.dart';
 
 /// 應用程式底部導覽列 (Bottom Navigation) 主頁面
 class MainNavigationScreen extends StatefulWidget {
@@ -23,7 +24,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     const PharmacyMapScreen(),
     const DrugSearchScreen(), 
     const AiAgentScreen(),
-    const _PlaceholderScreen(title: 'Profile & Bookmarks', icon: Icons.person_outline),
+    const ProfileScreen(),
   ];
 
   @override

@@ -3,25 +3,14 @@ import 'features/main_navigation_screen.dart';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-import 'package:flutter/services.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // 1. 載入 .env 檔案
-  await dotenv.load(fileName: ".env");
-
-  // 2. 將 .env 裡的 API Key 傳給 iOS Native 層
-  final apiKey = dotenv.env['GOOGLE_MAPS_API_KEY'];
-  if (apiKey != null && apiKey.isNotEmpty) {
-    const platform = MethodChannel('com.medpulse.app/config');
-    try {
-      await platform.invokeMethod('setGoogleMapsKey', {'key': apiKey});
-    } on PlatformException catch (e) {
-      print("Failed to set Google Maps API Key: '${e.message}'.");
-    }
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    debugPrint("Failed to load .env: $e");
   }
-
   runApp(const MedPulseApp());
 }
 

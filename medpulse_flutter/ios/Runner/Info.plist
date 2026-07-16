@@ -4,9 +4,9 @@
 <dict>
 	<!-- 定位權限說明 -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>MedPulse needs your location to show nearby pharmacies on the map.</string>
+	<string>MedPulse needs location access to search nearby pharmacies.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>MedPulse needs your location to show nearby pharmacies on the map.</string>
+	<string>MedPulse needs location access to search nearby pharmacies.</string>
 
 	<!-- HTTP 明文傳輸許可 -->
 	<key>NSAppTransportSecurity</key>
@@ -15,6 +15,8 @@
 		<true/>
 	</dict>
 
+	<!-- Google Maps iOS SDK Native Key -->
+	<key>GMSApiKey</key>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
