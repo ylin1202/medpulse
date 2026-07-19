@@ -6,6 +6,7 @@ from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identi
 from flask_mail import Message
 from app.extensions import mail
 from app.models.user import UserModel
+from app.utils.limiter import limiter
 
 # 建立 JWT Auth 的 Blueprint 模組
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/v1/auth")
@@ -22,6 +23,9 @@ redis_client = redis.StrictRedis(
 class AuthController:
     """封裝 Auth 相關 API 邏輯的 Class"""
 
+    # 先寫 limiter 限制，再寫 staticmethod
+    # 發送驗證碼，限制每個 IP 每分鐘只能打 3 次，防止簡訊/郵件被刷爆
+    @limiter.limit("3 per minute")
     @staticmethod
     def send_code():
         """發送 6 位數 Email 驗證碼 API"""
@@ -53,6 +57,7 @@ class AuthController:
             return jsonify({"error": f"Failed to send email: {str(e)}"}), 500
 
     @staticmethod
+    @limiter.limit("5 per minute")
     def register():
         """使用者註冊 API (含驗證碼比對)"""
         data = request.get_json() or {}
@@ -98,6 +103,9 @@ class AuthController:
         except Exception as e:
             return jsonify({"error": f"Failed to register user: {str(e)}"}), 500
 
+
+    # 登入 API，限制每個 IP 每分鐘最多試 5 次
+    @limiter.limit("5 per minute")
     @staticmethod
     def login():
         """使用者登入 API"""

@@ -1,9 +1,11 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
+from flask_limiter.errors import RateLimitExceeded  # 引入限流異常類別
 from app.extensions import mail
 from config import Config
 from app.utils.db import Database
+from app.utils.limiter import limiter
 from app.models.user import UserModel
 from app.models.favorite import FavoriteModel
 from app.routes.auth import auth_bp
@@ -26,6 +28,9 @@ def create_app():
     # 初始化 Flask-Mail (會去讀 app.config['MAIL_SERVER'] 等設定)
     mail.init_app(app)
 
+    # 註冊流量限制器
+    limiter.init_app(app)
+
     # 初始化 DB 連線池
     Database.init_pool(app)
 
@@ -38,7 +43,7 @@ def create_app():
     app.register_blueprint(drug_bp)
     app.register_blueprint(favorite_bp)
     app.register_blueprint(pharmacy_bp)
-
+    
     # 健康檢查 API
     @app.route("/health", methods=["GET"])
     def health_check():
@@ -56,5 +61,14 @@ def create_app():
             print("Database connection pool initialized & User table checked.")
         except Exception as e:
             print(f"Database initialization skipped or failed: {e}")
+    
+    @app.errorhandler(RateLimitExceeded)
+    def ratelimit_handler(e):
+        """當使用者流量打滿時，自訂的 429 錯誤回傳 JSON"""
+        return jsonify({
+            "status": "fail",
+            "error": "Too Many Requests",
+            "message": f"You have exceeded your request limit. Please try again later. Details: {e.description}"
+        }), 429
 
     return app

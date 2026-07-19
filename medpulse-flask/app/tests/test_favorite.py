@@ -12,6 +12,7 @@ class TestFavoriteAPI:
         """在每個測試方法執行前，自動初始化 Flask 測試客戶端、生成 Token 與共用變數"""
         app = create_app()
         app.config['TESTING'] = True
+        app.config["RATELIMIT_ENABLED"] = False
         app.config['JWT_SECRET_KEY'] = 'test-jwt-secret-key-for-medpulse-testing-32bytes'
         
         self.client = app.test_client()

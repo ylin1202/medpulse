@@ -11,6 +11,7 @@ class TestDrugAPI:
         """在每個測試方法執行前初始化 Flask 測試客戶端"""
         app = create_app()
         app.config['TESTING'] = True
+        app.config["RATELIMIT_ENABLED"] = False
         self.client = app.test_client()
         self.base_url = "/api/v1/drugs"
 

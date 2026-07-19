@@ -17,6 +17,7 @@ class TestPharmacyAPI:
         """在每個測試方法執行前，自動初始化 Flask 測試客戶端"""
         app = create_app()
         app.config['TESTING'] = True
+        app.config["RATELIMIT_ENABLED"] = False
         self.client = app.test_client()
         self.base_url = "/api/v1/pharmacies"
 
@@ -58,10 +59,15 @@ class TestPharmacyAPI:
     # ====================================================================
     # 2. 測試：帶中文條件篩選藥局 (GET /api/v1/pharmacies?q=祥全&city=臺北市)
     # ====================================================================
+    @patch('app.utils.cache.CacheService.get')  #
     @patch('app.utils.db.Database.execute_query')
-    def test_get_pharmacies_with_filters_success(self, mock_query):
+    def test_get_pharmacies_with_filters_success(self, mock_query, mock_cache_get):
         """測試：當帶入中文關鍵字 q 與縣市 city 篩選時，系統能正確調用並回傳過濾結果"""
         
+        # 1. 強制讓快取未命中 (Cache Miss)，確保系統一定會往下走去查資料庫
+        mock_cache_get.return_value = None
+        
+        # 2. 設定資料庫模擬回傳值
         mock_query.return_value = [
             {
                 "id": 1,
@@ -86,8 +92,7 @@ class TestPharmacyAPI:
         assert res_data["status"] == "success"
         assert res_data["count"] == 1
         
-        # 驗證 Model 內部的 Database.execute_query 是否有拿到正確的中文參數防禦
-        # 呼叫參數會儲存在 called_kwargs["params"] 中
+        # 3. 完美解鎖！因為有 mock_cache_get 攔截，這裡就不會 unpack 失敗了
         called_args, called_kwargs = mock_query.call_args
         assert "%祥全%" in called_kwargs["params"]
         assert "臺北市" in called_kwargs["params"]
@@ -95,12 +100,13 @@ class TestPharmacyAPI:
     # ====================================================================
     # 3. 測試：資料庫異常保護 (Error Handling)
     # ====================================================================
-    @patch('app.utils.cache.CacheService.get')  # 新增：Mock 快取服務
+    @patch('app.utils.cache.CacheService.get')  # Mock 快取服務
     @patch('app.utils.db.Database.execute_query')
     def test_get_pharmacies_database_error(self, mock_query, mock_cache_get):
         """測試：當資料庫查詢噴出強烈異常時，控制器應能捕捉並回應 500 狀態碼"""
         
         # 1. 強制讓快取未命中 (Cache Miss)，逼迫系統一定要往下走去查資料庫
+        # 有了這行 Mock 攔截，就完全不需要手動呼叫 CacheService.delete 了
         mock_cache_get.return_value = None
         
         # 2. 強制讓資料庫拋出 Exception
