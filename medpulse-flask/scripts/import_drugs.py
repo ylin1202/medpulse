@@ -53,10 +53,11 @@ def import_json_to_db(json_file_path):
     )
     cursor = conn.cursor()
 
-    # 1. 自動建表
+    # 1. 自動建表與加強防呆約束
     create_table_sql = """
     CREATE TABLE IF NOT EXISTS drugs (
-        id VARCHAR(100) PRIMARY KEY,
+        id SERIAL PRIMARY KEY,
+        openfda_id VARCHAR(100),
         brand_name VARCHAR(255),
         generic_name VARCHAR(255),
         manufacturer_name VARCHAR(255),
@@ -71,6 +72,20 @@ def import_json_to_db(json_file_path):
         raw_openfda JSONB,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+
+    -- 安全加入 UNIQUE Constraint (若已存在則忽略)
+    DO $$
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint WHERE conname = 'unique_openfda_id'
+        ) THEN
+            ALTER TABLE drugs ADD CONSTRAINT unique_openfda_id UNIQUE (openfda_id);
+        END IF;
+    END $$;
+
+    CREATE INDEX IF NOT EXISTS idx_drugs_brand_name ON drugs(brand_name);
+    CREATE INDEX IF NOT EXISTS idx_drugs_generic_name ON drugs(generic_name);
+    CREATE INDEX IF NOT EXISTS idx_drugs_openfda_id ON drugs(openfda_id);
     """
     cursor.execute(create_table_sql)
 
@@ -81,13 +96,13 @@ def import_json_to_db(json_file_path):
     results = data.get("results", [])
     print(f"準備匯入 {len(results)} 筆藥品資料...")
 
-    # 3. 批次寫入資料庫
+    # 3. 批次寫入 (id 自動由 1 開始算起)
     insert_sql = """
     INSERT INTO drugs (
-        id, brand_name, generic_name, manufacturer_name, product_type, route,
+        openfda_id, brand_name, generic_name, manufacturer_name, product_type, route,
         active_ingredient, purpose, indications_and_usage, warnings, do_not_use, boxed_warning, raw_openfda
     ) VALUES %s
-    ON CONFLICT (id) DO NOTHING;
+    ON CONFLICT (openfda_id) DO NOTHING;
     """
 
     drug_records = [extract_drug_data(item) for item in results if item.get("id")]
@@ -101,10 +116,6 @@ def import_json_to_db(json_file_path):
     conn.close()
 
 if __name__ == "__main__":
-    # 自動取得目前 import_drugs.py 所在的資料夾路徑
     CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-    
-    # 指向同在 scripts 資料夾下的 drug-label-0014.json
     JSON_PATH = os.path.join(CURRENT_DIR, "drug-label-0014.json")
-    
     import_json_to_db(JSON_PATH)
