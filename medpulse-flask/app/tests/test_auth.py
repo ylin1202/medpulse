@@ -155,3 +155,30 @@ class TestAuthAPI:
         res_data = json.loads(response.data)
         assert res_data["user_id"] == "42"
         assert res_data["status"] == "authenticated"
+
+    # ====================================================================
+    # 5. 測試：使用者登出與黑名單廢棄 (POST /api/v1/auth/logout)
+    # ====================================================================
+    @patch('app.routes.auth.redis_client')
+    def test_logout_success(self, mock_redis):
+        """測試：帶上合法 Token 請求登出時，系統應計算 Token 剩餘壽命並成功將 JTI 寫入 Redis 黑名單"""
+        # 模擬 Redis 的 setex 操作成功
+        mock_redis.setex.return_value = True
+
+        # 發送登出請求（使用 setup_method 中生成的 self.headers）
+        response = self.client.post(f"{self.base_url}/logout", headers=self.headers)
+
+        # 1. 驗證回應狀態碼與內容
+        assert response.status_code == 200
+        res_data = json.loads(response.data)
+        assert res_data["status"] == "success"
+        assert "Successfully logged out" in res_data["message"]
+
+        # 2. 驗證 Controller 內部是否有正確呼叫 redis_client.setex
+        assert mock_redis.setex.called
+        called_args, _ = mock_redis.setex.call_args
+        
+        # 檢查寫入 Redis 的 Key 格式是否為 blacklist:<jti>
+        assert called_args[0].startswith("blacklist:")
+        # 檢查存入的值是否為被廢棄的標記值 "revoked"
+        assert called_args[2] == "revoked"

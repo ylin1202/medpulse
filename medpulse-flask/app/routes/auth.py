@@ -2,7 +2,7 @@ import os
 import random
 import redis
 from flask import Blueprint, request, jsonify, current_app
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
 from flask_mail import Message
 from app.extensions import mail
 from app.models.user import UserModel
@@ -56,8 +56,8 @@ class AuthController:
         except Exception as e:
             return jsonify({"error": f"Failed to send email: {str(e)}"}), 500
 
-    @staticmethod
     @limiter.limit("5 per minute")
+    @staticmethod
     def register():
         """使用者註冊 API (含驗證碼比對)"""
         data = request.get_json() or {}
@@ -103,7 +103,6 @@ class AuthController:
         except Exception as e:
             return jsonify({"error": f"Failed to register user: {str(e)}"}), 500
 
-
     # 登入 API，限制每個 IP 每分鐘最多試 5 次
     @limiter.limit("5 per minute")
     @staticmethod
@@ -134,6 +133,31 @@ class AuthController:
 
     @staticmethod
     @jwt_required()
+    def logout():
+        """處理使用者登出並將 Token 註銷存入黑名單"""
+        try:
+            # 取得當前請求內攜帶的 JWT Payload 資料
+            jwt_data = get_jwt()
+            jti = jwt_data["jti"]  # 取得獨一無二的 Token ID
+            
+            # 計算 Token 的剩餘存活秒數 (過期時間戳 - 當前時間戳)
+            from datetime import datetime, timezone
+            now = datetime.now(timezone.utc).timestamp()
+            remains = max(int(jwt_data["exp"] - now), 1)
+
+            # 將 Token ID 丟進 Redis 黑名單，並設定其與 Token 同步過期
+            redis_client.setex(f"blacklist:{jti}", remains, "revoked")
+
+            return jsonify({
+                "status": "success",
+                "message": "Successfully logged out. Token has been revoked."
+            }), 200
+
+        except Exception as e:
+            return jsonify({"error": f"Logout failed: {str(e)}"}), 500
+
+    @staticmethod
+    @jwt_required()
     def get_profile():
         """取得個人 Profile (需帶 Bearer JWT Token)"""
         current_user_id = get_jwt_identity()
@@ -147,4 +171,5 @@ class AuthController:
 auth_bp.route("/send-code", methods=["POST"])(AuthController.send_code) 
 auth_bp.route("/register", methods=["POST"])(AuthController.register)
 auth_bp.route("/login", methods=["POST"])(AuthController.login)
+auth_bp.route("/logout", methods=["POST"])(AuthController.logout)
 auth_bp.route("/me", methods=["GET"])(AuthController.get_profile)
