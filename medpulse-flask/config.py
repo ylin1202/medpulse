@@ -14,6 +14,11 @@ class Config:
     DB_USER = os.getenv("DB_USER", "postgres")
     DB_PASSWORD = os.getenv("DB_PASSWORD", "postgres")
 
+    # ⚡ Redis 連線參數
+    REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+    REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+    DB_REDIS = int(os.getenv("DB_REDIS", 0))
+
     # Flask-Mail / SMTP 郵件伺服器設定
     MAIL_SERVER = 'smtp.gmail.com'
     MAIL_PORT = 587

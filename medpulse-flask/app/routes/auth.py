@@ -1,3 +1,4 @@
+import os
 import random
 import redis
 from flask import Blueprint, request, jsonify, current_app
@@ -9,8 +10,13 @@ from app.models.user import UserModel
 # 建立 JWT Auth 的 Blueprint 模組
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/v1/auth")
 
-# ⚡ 連接 Redis (用來存 5 分鐘快取驗證碼)
-redis_client = redis.StrictRedis(host='localhost', port=6379, db=0, decode_responses=True)
+# 從環境變數或專案設定讀取 Redis，防止 Hardcoded
+redis_client = redis.StrictRedis(
+    host=os.getenv("REDIS_HOST", "localhost"),
+    port=int(os.getenv("REDIS_PORT", 6379)),
+    db=int(os.getenv("DB_REDIS", 0)),
+    decode_responses=True
+)
 
 
 class AuthController:
