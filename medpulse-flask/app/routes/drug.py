@@ -1,3 +1,4 @@
+import math
 from flask import Blueprint, request, jsonify
 from app.models.drug import DrugModel
 from app.utils.cache import CacheService    # 💡 引入寫好的快取工具
@@ -11,14 +12,15 @@ class DrugController:
     @staticmethod
     def get_drugs():
         try:
+            # 1. 取得並清理 Request 參數 (加上 limit 防呆，防止 limit <= 0 造成除以 0 崩潰)
             keyword = request.args.get("q", "").strip() or None
-            page = int(request.args.get("page", 1))
-            limit = int(request.args.get("limit", 10))
+            page = max(1, int(request.args.get("page", 1)))
+            limit = max(1, int(request.args.get("limit", 10)))
 
-            # 1. 建立動態快取 Key
+            # 2. 建立動態快取 Key
             cache_key = f"cache:drugs:q:{keyword}:p:{page}:limit:{limit}"
 
-            # 2. 嘗試命中快取
+            # 3. 嘗試命中快取
             cached_data = CacheService.get(cache_key)
             if cached_data:
                 return jsonify({
@@ -27,26 +29,50 @@ class DrugController:
                     **cached_data
                 }), 200
 
-            # 3. 快取未命中，直接戳原本的 Model 邏輯
+            # 4. 快取未命中，撈取 Model 資料
             result = DrugModel.get_list(keyword=keyword, page=page, limit=limit)
 
-            # 如果 result 本身就是測試預期的最終格式，或者內部藏在 pagination 裡，統統撈出來
+            # 5. 解析數據與總筆數 (相容多元 Model 回傳結構)
             if isinstance(result, dict) and "pagination" in result:
-                pagination_data = result["pagination"]
-                total_count = pagination_data.get("total_items") or pagination_data.get("total") or 0
+                pagination_data = result.get("pagination", {})
+                total_count = (
+                    pagination_data.get("total_items")
+                    or pagination_data.get("total")
+                    or 0
+                )
                 items_data = result.get("items") or result.get("data") or []
+                raw_total_pages = pagination_data.get("total_pages")
+            elif isinstance(result, dict):
+                total_count = (
+                    result.get("total_items")
+                    or result.get("total")
+                    or result.get("count")
+                    or 0
+                )
+                items_data = result.get("items") or result.get("data") or []
+                raw_total_pages = result.get("total_pages")
             else:
-                # 如果 Model 只丟出原始 dict，我們從最底層的鍵值拿
-                total_count = result.get("total_items") or result.get("total") or result.get("count") or 0
-                items_data = result.get("items") or result.get("data") or []
+                total_count = 0
+                items_data = []
+                raw_total_pages = None
 
-            # 5. 組裝完全符合測試斷言的標準格式
+            # 6. 強固的 total_pages 動態計算！
+            # 若原始 total_pages 存在且大於 1 則信任它；否則只要 total_count > 0，一律重新用 math.ceil 計算
+            if raw_total_pages is not None and raw_total_pages > 1:
+                total_pages = raw_total_pages
+            elif total_count > 0:
+                total_pages = math.ceil(total_count / limit)
+            else:
+                total_pages = 1
+
+            # 7. 組裝完全符合測試斷言與前端 Flutter 的標準格式
             response_payload = {
                 "pagination": {
                     "total_items": total_count,
+                    "total": total_count,          # 補上 total 以相容 Flutter
                     "page": page,
                     "limit": limit,
-                    "total_pages": result.get("total_pages") or 1
+                    "total_pages": total_pages     # 確保精準的總頁數
                 },
                 "data": items_data
             }
