@@ -6,10 +6,10 @@ import '../data/pharmacy_model.dart';
 
 /// 台灣主要縣市資料模型
 class CityOption {
-  final String label;   // UI 顯示的中英文名稱
-  final String? value;  
-  final LatLng center;  // 切換該縣市時地圖鏡頭移動的中心點
-  final double zoom;    // 預設適合的縮放比例
+  final String label; // UI 顯示的中英文名稱
+  final String? value;
+  final LatLng center; // 切換該縣市時地圖鏡頭移動的中心點
+  final double zoom; // 預設適合的縮放比例
 
   const CityOption({
     required this.label,
@@ -105,11 +105,13 @@ class _PharmacyMapScreenState extends State<PharmacyMapScreen> {
   bool _isLoading = true;
   PharmacyModel? _selectedPharmacy;
 
-  // 當前選中的縣市 (預設全台灣 All Taiwan)
+  // 當前選中的縣市
   CityOption _selectedCity = cityOptions[0];
 
   // 官方 Cluster 管理器 ID
-  static const ClusterManagerId _clusterManagerId = ClusterManagerId('pharmacy_cluster');
+  static const ClusterManagerId _clusterManagerId = ClusterManagerId(
+    'pharmacy_cluster',
+  );
 
   @override
   void initState() {
@@ -132,7 +134,7 @@ class _PharmacyMapScreenState extends State<PharmacyMapScreen> {
     };
   }
 
-  /// 向 Flask API 請求藥局資料 (支援帶入 ?city=xxx 參數)
+  /// 向 API 請求藥局資料
   Future<void> _fetchPharmacies() async {
     setState(() => _isLoading = true);
 
@@ -151,12 +153,11 @@ class _PharmacyMapScreenState extends State<PharmacyMapScreen> {
         final List rawData = response.data['data'] ?? [];
         final items = rawData.map((e) => PharmacyModel.fromJson(e)).toList();
 
-        // 轉換成綁定 ClusterManagerId 的原生 Markers
         final markers = items.map((pharmacy) {
           return Marker(
             markerId: MarkerId('pharmacy_${pharmacy.id}'),
             position: pharmacy.location,
-            clusterManagerId: _clusterManagerId, // 💡 自動交給官方原生的 ClusterManager 計算
+            clusterManagerId: _clusterManagerId, // 自動交給官方原生的 ClusterManager 計算
             infoWindow: InfoWindow(
               title: pharmacy.name,
               snippet: pharmacy.address,
@@ -181,7 +182,7 @@ class _PharmacyMapScreenState extends State<PharmacyMapScreen> {
         });
       }
     } catch (e) {
-      print('❌ [Map Error] Failed to load pharmacies: $e');
+      print('[Map Error] Failed to load pharmacies: $e');
       setState(() => _isLoading = false);
     }
   }
@@ -195,30 +196,25 @@ class _PharmacyMapScreenState extends State<PharmacyMapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 取得手機頂部安全區域高度 (動態避開瀏海/狀態列)
+    final double topSafeArea = MediaQuery.of(context).padding.top;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pharmacy Finder Map', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF00796B),
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetchPharmacies,
-          )
-        ],
-      ),
+      // 💡 1. 直接移除傳統 AppBar，採用全螢幕地圖
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
-          // 1. 全螢幕 Google Maps
+          // 2. 全螢幕滿版 Google Maps
           GoogleMap(
             initialCameraPosition: CameraPosition(
               target: _selectedCity.center,
               zoom: _selectedCity.zoom,
             ),
             markers: _markers,
-            clusterManagers: _clusterManagers, // 💡 使用 Google 官方原生的聚類管理器
+            clusterManagers: _clusterManagers,
             myLocationEnabled: true,
             myLocationButtonEnabled: true,
+            padding: const EdgeInsets.only(top: 90, bottom: 20), // 留出控制項空間避免擋住按鈕
             onMapCreated: (controller) {
               _mapController = controller;
             },
@@ -227,71 +223,117 @@ class _PharmacyMapScreenState extends State<PharmacyMapScreen> {
             },
           ),
 
-          // 2. 頂部懸浮中英文縣市選擇器 (City Dropdown Selector)
+          // 3. 一體化懸浮地圖搜尋/控制列 (Floating Bar)
           Positioned(
-            top: 12,
+            top: topSafeArea + 12, // 自動適應不同手機的動態島 / 瀏海
             left: 16,
             right: 16,
-            child: Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              color: Colors.white,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: Row(
-                  children: [
-                    const Icon(Icons.location_city, color: Color(0xFF00796B)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<CityOption>(
-                          value: _selectedCity,
-                          isExpanded: true,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                          items: cityOptions.map((city) {
-                            return DropdownMenuItem<CityOption>(
-                              value: city,
-                              child: Text(city.label),
-                            );
-                          }).toList(),
-                          onChanged: (newCity) {
-                            if (newCity != null) {
-                              setState(() {
-                                _selectedCity = newCity;
-                                _selectedPharmacy = null;
-                              });
-                              _fetchPharmacies(); // 打 API 抓取該縣市資料
-                              _moveCameraToCity(newCity); // 鏡頭動畫飛往該縣市
-                            }
-                          },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.12),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  // 主題圖示
+                  const Icon(
+                    Icons.local_pharmacy,
+                    color: Color(0xFF00796B),
+                    size: 24,
+                  ),
+                  const SizedBox(width: 10),
+
+                  // 縣市選擇 Dropdown
+                  Expanded(
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<CityOption>(
+                        value: _selectedCity,
+                        isExpanded: true,
+                        icon: const Icon(
+                          Icons.arrow_drop_down,
+                          color: Color(0xFF00796B),
                         ),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                        items: cityOptions.map((city) {
+                          return DropdownMenuItem<CityOption>(
+                            value: city,
+                            child: Text(
+                              city.label,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (newCity) {
+                          if (newCity != null) {
+                            setState(() {
+                              _selectedCity = newCity;
+                              _selectedPharmacy = null;
+                            });
+                            _fetchPharmacies();
+                            _moveCameraToCity(newCity);
+                          }
+                        },
                       ),
                     ),
-                  ],
-                ),
+                  ),
+
+                  const SizedBox(width: 4),
+                  const VerticalDivider(
+                    width: 1,
+                    indent: 8,
+                    endIndent: 8,
+                    color: Colors.grey,
+                  ),
+                  const SizedBox(width: 4),
+
+                  // 重新整理按鈕 (可依據 _isLoading 顯示載入動畫)
+                  IconButton(
+                    icon: _isLoading
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              color: Color(0xFF00796B),
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.refresh,
+                            color: Color(0xFF00796B),
+                            size: 22,
+                          ),
+                    tooltip: 'Refresh Pharmacies',
+                    onPressed: _isLoading ? null : _fetchPharmacies,
+                  ),
+                ],
               ),
             ),
           ),
 
-          // 3. 載入中指示器
-          if (_isLoading)
-            const Center(
-              child: CircularProgressIndicator(color: Color(0xFF00796B)),
-            ),
-
-          // 4. 點擊藥局時彈出的詳細資訊卡片
+          // 4. 點擊藥局時彈出的底部詳細資訊卡片 (保持原本漂亮的設計)
           if (_selectedPharmacy != null)
             Positioned(
-              bottom: 20,
+              bottom: 24,
               left: 16,
               right: 16,
               child: Card(
-                elevation: 6,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 8,
+                shadowColor: Colors.black26,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -304,26 +346,40 @@ class _PharmacyMapScreenState extends State<PharmacyMapScreen> {
                           Expanded(
                             child: Text(
                               _selectedPharmacy!.name,
-                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           Chip(
+                            padding: EdgeInsets.zero,
                             label: Text(
-                              _selectedPharmacy!.isNhiContracted ? 'NHI Contracted' : 'Non-NHI',
-                              style: const TextStyle(color: Colors.white, fontSize: 12),
+                              _selectedPharmacy!.isNhiContracted
+                                  ? 'NHI Contracted'
+                                  : 'Non-NHI',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             backgroundColor: _selectedPharmacy!.isNhiContracted
                                 ? const Color(0xFF00796B)
                                 : Colors.grey,
-                          )
+                          ),
                         ],
                       ),
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          const Icon(Icons.location_on_outlined, size: 18, color: Colors.grey),
-                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.location_on_outlined,
+                            size: 18,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               _selectedPharmacy!.address,
@@ -333,12 +389,19 @@ class _PharmacyMapScreenState extends State<PharmacyMapScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Row(
                         children: [
-                          const Icon(Icons.phone_outlined, size: 18, color: Colors.grey),
-                          const SizedBox(width: 4),
-                          Text(_selectedPharmacy!.phone, style: const TextStyle(color: Colors.black87)),
+                          const Icon(
+                            Icons.phone_outlined,
+                            size: 18,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _selectedPharmacy!.phone,
+                            style: const TextStyle(color: Colors.black87),
+                          ),
                         ],
                       ),
                     ],
