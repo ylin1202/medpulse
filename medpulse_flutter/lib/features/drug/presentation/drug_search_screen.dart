@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../../../core/auth/auth_service.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/widgets/pagination_bar.dart'; 
+import '../../favorite/presentation/favorite_button.dart'; 
 import '../data/drug_model.dart';
 import 'drug_detail_screen.dart';
 
@@ -24,12 +27,19 @@ class _DrugSearchScreenState extends State<DrugSearchScreen> {
   @override
   void initState() {
     super.initState();
-    // 畫面一載入，立即發送請求獲取第一頁藥品清單
     _fetchDrugs();
   }
 
-  /// 呼叫 Flask 後端取得藥品清單與搜尋 API (GET /api/v1/drugs)
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  /// 呼叫 Flask 後端 API (GET /api/v1/drugs)
   Future<void> _fetchDrugs({String? query, int page = 1}) async {
+    if (!mounted) return;
+
     setState(() {
       _isLoading = true;
     });
@@ -45,16 +55,12 @@ class _DrugSearchScreenState extends State<DrugSearchScreen> {
         queryParams['q'] = keyword;
       }
 
-      print('[Drug Finder] Fetching page $page with query: "$keyword"');
-
       final response = await ApiClient().dio.get(
         '/drugs',
         queryParameters: queryParams,
       );
 
-      print('[Drug Finder] Response Status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 && mounted) {
         final List rawData = response.data['data'] ?? [];
         final items = rawData.map((e) => DrugModel.fromJson(e)).toList();
         final pagination = response.data['pagination'] ?? {};
@@ -68,207 +74,326 @@ class _DrugSearchScreenState extends State<DrugSearchScreen> {
         });
       }
     } catch (e) {
-      print('[Drug Finder Error]: $e');
-      setState(() {
-        _searchResults = [];
-        _isLoading = false;
-      });
+      debugPrint('[Drug Finder Error]: $e');
+      if (mounted) {
+        setState(() {
+          _searchResults = [];
+          _isLoading = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text('Drug Finder', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Drug Finder',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: const Color(0xFF00796B),
         foregroundColor: Colors.white,
+        elevation: 0,
       ),
       body: Column(
         children: [
-          // 1. 頂部搜尋列
+          // 1. 頂部搜尋整合面板 (白底 + 輕量 Accent 頂條)
           Container(
-            padding: const EdgeInsets.all(16.0),
-            color: const Color(0xFF00796B).withOpacity(0.05),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    textInputAction: TextInputAction.search,
-                    decoration: InputDecoration(
-                      hintText: 'Search drug name (e.g. minoxidil, aspirin)...',
-                      prefixIcon: const Icon(Icons.search, color: Color(0xFF00796B)),
-                      suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                _searchController.clear();
-                                _fetchDrugs(query: '', page: 1);
-                              },
-                            )
-                          : null,
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    onSubmitted: (value) => _fetchDrugs(query: value, page: 1),
-                  ),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: () => _fetchDrugs(query: _searchController.text, page: 1),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00796B),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+              ],
+            ),
+            child: Column(
+              children: [
+                // 搜尋外框卡片
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8F9FA),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.teal.shade100, width: 1),
                   ),
-                  child: const Text('Search'),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 12),
+                      const Icon(Icons.search, color: Color(0xFF00796B), size: 22),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          textInputAction: TextInputAction.search,
+                          style: const TextStyle(fontSize: 14),
+                          decoration: InputDecoration(
+                            hintText: 'Search drug name (e.g. minoxidil)...',
+                            hintStyle: TextStyle(
+                              color: Colors.grey[400],
+                              fontSize: 13,
+                            ),
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                            suffixIcon: _searchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear, color: Colors.grey, size: 18),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      _fetchDrugs(query: '', page: 1);
+                                    },
+                                  )
+                                : null,
+                          ),
+                          onSubmitted: (value) => _fetchDrugs(query: value, page: 1),
+                        ),
+                      ),
+                      
+                      // 內嵌式搜尋按鈕
+                      Padding(
+                        padding: const EdgeInsets.all(4.0),
+                        child: Material(
+                          color: const Color(0xFF00796B),
+                          borderRadius: BorderRadius.circular(10),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(10),
+                            onTap: () => _fetchDrugs(query: _searchController.text, page: 1),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              child: Text(
+                                'Search',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
 
-          // 2. 藥品清單與狀態展示
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: Color(0xFF00796B)))
-                : _searchResults.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.medication_outlined, size: 64, color: Colors.grey[400]),
-                            const SizedBox(height: 12),
-                            Text(
-                              'No drugs found.',
-                              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                            ),
-                          ],
+          // 筆數資訊與標題
+          if (!_isLoading && _searchResults.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: const [
+                      Icon(Icons.format_list_bulleted, size: 16, color: Color(0xFF00796B)),
+                      SizedBox(width: 6),
+                      Text(
+                        'Medication Results',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF004D40),
+                          fontSize: 13,
                         ),
-                      )
-                    : Column(
-                        children: [
-                          // 筆數統計資訊
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    'Total $_totalItems items',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // 2. 藥品清單區域
+          Expanded(
+            child: ValueListenableBuilder<bool>(
+              valueListenable: AuthService.authState,
+              builder: (context, isLoggedIn, child) {
+                if (_isLoading) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: Color(0xFF00796B)),
+                  );
+                }
+
+                if (_searchResults.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.medication_outlined, size: 60, color: Colors.grey[300]),
+                        const SizedBox(height: 12),
+                        Text(
+                          'No drugs matched your query.',
+                          style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  itemCount: _searchResults.length,
+                  itemBuilder: (context, index) {
+                    final drug = _searchResults[index];
+                    final int drugId = int.tryParse(drug.id) ?? 0;
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: Colors.teal.shade50,
+                          width: 1.2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.02),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(14),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => DrugDetailScreen(drug: drug),
+                              ),
+                            ).then((_) {
+                              if (mounted) setState(() {});
+                            });
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(14.0),
                             child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'Total: $_totalItems drugs',
-                                  style: TextStyle(color: Colors.grey[600], fontSize: 13, fontWeight: FontWeight.w500),
+                                // 左側藥品圖示 Icon 膠囊
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF00796B).withOpacity(0.08),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(
+                                    Icons.health_and_safety_outlined,
+                                    color: Color(0xFF00796B),
+                                    size: 22,
+                                  ),
                                 ),
-                                Text(
-                                  'Page $_currentPage / $_totalPages',
-                                  style: TextStyle(color: Colors.grey[600], fontSize: 13, fontWeight: FontWeight.w500),
+                                const SizedBox(width: 12),
+
+                                // 中間資訊欄位
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        drug.brandName,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 15,
+                                          color: Colors.black87,
+                                          height: 1.25,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+
+                                      // Generic Name (柔和綠 Chip)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 3,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.teal.shade50,
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          'Generic: ${drug.genericName}',
+                                          style: const TextStyle(
+                                            color: Color(0xFF00695C),
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+
+                                      // 製造商
+                                      Text(
+                                        'Mfr: ${drug.manufacturer}',
+                                        style: TextStyle(
+                                          color: Colors.grey[500],
+                                          fontSize: 11,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                // 右側操作按鈕 (收藏 + 箭頭)
+                                Column(
+                                  children: [
+                                    FavoriteButton(
+                                      key: ValueKey('fav_${drugId}_$isLoggedIn'),
+                                      drugId: drugId,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    const Icon(
+                                      Icons.arrow_forward_ios,
+                                      size: 12,
+                                      color: Colors.grey,
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
                           ),
-
-                          // 列表內容
-                          Expanded(
-                            child: ListView.builder(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              itemCount: _searchResults.length,
-                              itemBuilder: (context, index) {
-                                final drug = _searchResults[index];
-                                return Card(
-                                  elevation: 2,
-                                  margin: const EdgeInsets.only(bottom: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: ListTile(
-                                    contentPadding: const EdgeInsets.all(16),
-                                    leading: CircleAvatar(
-                                      backgroundColor: const Color(0xFF00796B).withOpacity(0.1),
-                                      child: const Icon(Icons.medication, color: Color(0xFF00796B)),
-                                    ),
-                                    title: Text(
-                                      drug.brandName,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    subtitle: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'Generic: ${drug.genericName}',
-                                          style: TextStyle(color: Colors.grey[700]),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          'Mfr: ${drug.manufacturer}',
-                                          style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                                        ),
-                                      ],
-                                    ),
-                                    trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => DrugDetailScreen(drug: drug),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-
-                          // 3. 底部簡易分頁切換控制 (Pagination)
-                          if (_totalPages > 1)
-                            Container(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, -2),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.arrow_back_ios, size: 18),
-                                    onPressed: _currentPage > 1
-                                        ? () => _fetchDrugs(page: _currentPage - 1)
-                                        : null,
-                                  ),
-                                  Text(
-                                    '$_currentPage / $_totalPages',
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.arrow_forward_ios, size: 18),
-                                    onPressed: _currentPage < _totalPages
-                                        ? () => _fetchDrugs(page: _currentPage + 1)
-                                        : null,
-                                  ),
-                                ],
-                              ),
-                            ),
-                        ],
+                        ),
                       ),
+                    );
+                  },
+                );
+              },
+            ),
           ),
+
+          // 3. 通用分頁列
+          if (!_isLoading && _searchResults.isNotEmpty)
+            PaginationBar(
+              currentPage: _currentPage,
+              totalPages: _totalPages,
+              onPageChanged: (newPage) => _fetchDrugs(page: newPage),
+            ),
         ],
       ),
     );
