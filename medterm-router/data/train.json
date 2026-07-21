@@ -1,0 +1,602 @@
+[
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "The laboratory report came back showing fluctuating levels of Hemoglobin. However, Red Blood Cells appears perfectly stable within normal ranges.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Hemoglobin, Red Blood Cells. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Hemoglobin\",\n    \"Red Blood Cells\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "The patient's family requested a simplified explanation of the morning lab results, specifically asking about the values of Phosphate and Potassium.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Phosphate, Potassium. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Phosphate\",\n    \"Potassium\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Post-op recovery progress is acceptable. Follow-up blood work is ordered for tomorrow morning to evaluate MCH, Potassium, and Phosphate.",
+    "output": "{\n  \"thought\": \"The clinical input mentions MCH, Potassium, Phosphate. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"MCH\",\n    \"Potassium\",\n    \"Phosphate\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Clinical note from ICU: please monitor the patient's vital signs and run automated panels for Magnesium, Platelet Count, and MCH every 12 hours.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Platelet Count, MCH, Magnesium. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Platelet Count\",\n    \"MCH\",\n    \"Magnesium\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Physician initial assessment: symptoms indicate potential metabolic stress. Request full panel including Bicarbonate, RDW, and Potassium immediately.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Bicarbonate, Potassium, RDW. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Bicarbonate\",\n    \"Potassium\",\n    \"RDW\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Physician initial assessment: symptoms indicate potential metabolic stress. Request full panel including White Blood Cells, Potassium, and Urea Nitrogen immediately.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Urea Nitrogen, White Blood Cells, Potassium. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Urea Nitrogen\",\n    \"White Blood Cells\",\n    \"Potassium\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Post-op recovery progress is acceptable. Follow-up blood work is ordered for tomorrow morning to evaluate Calcium, Total, Sodium, and Urea Nitrogen.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Sodium, Calcium, Total, Urea Nitrogen. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Sodium\",\n    \"Calcium, Total\",\n    \"Urea Nitrogen\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Pre-operative evaluation requires a comprehensive clearance. Ensure that Magnesium and MCHC are documented in the pre-op chart.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Magnesium, MCHC. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Magnesium\",\n    \"MCHC\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Patient was admitted to the ER presenting with extreme fatigue and pale skin. Emergency physician requested immediate screening for White Blood Cells and Calcium, Total.",
+    "output": "{\n  \"thought\": \"The clinical input mentions White Blood Cells, Calcium, Total. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"White Blood Cells\",\n    \"Calcium, Total\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Clinical note from ICU: please monitor the patient's vital signs and run automated panels for Glucose, Chloride, and Phosphate every 12 hours.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Chloride, Phosphate, Glucose. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Chloride\",\n    \"Phosphate\",\n    \"Glucose\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Discharge summary draft: Patient is stable to leave. Outpatient clinic follow-up scheduled in 2 weeks to re-test Sodium and MCHC.",
+    "output": "{\n  \"thought\": \"The clinical input mentions MCHC, Sodium. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"MCHC\",\n    \"Sodium\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Post-op recovery progress is acceptable. Follow-up blood work is ordered for tomorrow morning to evaluate Potassium, RDW, and Chloride.",
+    "output": "{\n  \"thought\": \"The clinical input mentions RDW, Chloride, Potassium. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"RDW\",\n    \"Chloride\",\n    \"Potassium\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Post-op recovery progress is acceptable. Follow-up blood work is ordered for tomorrow morning to evaluate Sodium, Hemoglobin, and MCH.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Sodium, Hemoglobin, MCH. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Sodium\",\n    \"Hemoglobin\",\n    \"MCH\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Post-op recovery progress is acceptable. Follow-up blood work is ordered for tomorrow morning to evaluate Magnesium, Sodium, and Red Blood Cells.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Magnesium, Sodium, Red Blood Cells. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Magnesium\",\n    \"Sodium\",\n    \"Red Blood Cells\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Clinical note from ICU: please monitor the patient's vital signs and run automated panels for Sodium, Phosphate, and Platelet Count every 12 hours.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Platelet Count, Sodium, Phosphate. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Platelet Count\",\n    \"Sodium\",\n    \"Phosphate\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Post-op recovery progress is acceptable. Follow-up blood work is ordered for tomorrow morning to evaluate Hematocrit, Chloride, and MCHC.",
+    "output": "{\n  \"thought\": \"The clinical input mentions MCHC, Chloride, Hematocrit. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"MCHC\",\n    \"Chloride\",\n    \"Hematocrit\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Clinical note from ICU: please monitor the patient's vital signs and run automated panels for Bicarbonate, Glucose, and Platelet Count every 12 hours.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Bicarbonate, Platelet Count, Glucose. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Bicarbonate\",\n    \"Platelet Count\",\n    \"Glucose\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Clinical note from ICU: please monitor the patient's vital signs and run automated panels for Chloride, Sodium, and Red Blood Cells every 12 hours.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Sodium, Red Blood Cells, Chloride. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Sodium\",\n    \"Red Blood Cells\",\n    \"Chloride\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Physician initial assessment: symptoms indicate potential metabolic stress. Request full panel including Creatinine, RDW, and MCHC immediately.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Creatinine, RDW, MCHC. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Creatinine\",\n    \"RDW\",\n    \"MCHC\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Post-op recovery progress is acceptable. Follow-up blood work is ordered for tomorrow morning to evaluate Potassium, Creatinine, and Hemoglobin.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Creatinine, Potassium, Hemoglobin. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Creatinine\",\n    \"Potassium\",\n    \"Hemoglobin\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Discharge summary draft: Patient is stable to leave. Outpatient clinic follow-up scheduled in 2 weeks to re-test Sodium and Glucose.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Glucose, Sodium. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Glucose\",\n    \"Sodium\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Discharge summary draft: Patient is stable to leave. Outpatient clinic follow-up scheduled in 2 weeks to re-test White Blood Cells and Sodium.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Sodium, White Blood Cells. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Sodium\",\n    \"White Blood Cells\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Physician initial assessment: symptoms indicate potential metabolic stress. Request full panel including White Blood Cells, Urea Nitrogen, and Glucose immediately.",
+    "output": "{\n  \"thought\": \"The clinical input mentions White Blood Cells, Glucose, Urea Nitrogen. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"White Blood Cells\",\n    \"Glucose\",\n    \"Urea Nitrogen\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Routine health check-up panel completed. The primary care provider highlighted borderline abnormal findings in Hematocrit. Creatinine is tracked as control.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Hematocrit, Creatinine. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Hematocrit\",\n    \"Creatinine\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Clinical note from ICU: please monitor the patient's vital signs and run automated panels for Magnesium, Phosphate, and Platelet Count every 12 hours.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Platelet Count, Magnesium, Phosphate. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Platelet Count\",\n    \"Magnesium\",\n    \"Phosphate\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "The telemedicine consultation note indicates the need to re-verify past lab charts. Prioritize tracking historical trends for Red Blood Cells and Platelet Count.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Platelet Count, Red Blood Cells. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Platelet Count\",\n    \"Red Blood Cells\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Physician initial assessment: symptoms indicate potential metabolic stress. Request full panel including MCHC, Phosphate, and MCH immediately.",
+    "output": "{\n  \"thought\": \"The clinical input mentions MCH, Phosphate, MCHC. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"MCH\",\n    \"Phosphate\",\n    \"MCHC\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Pre-operative evaluation requires a comprehensive clearance. Ensure that Hemoglobin and Platelet Count are documented in the pre-op chart.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Platelet Count, Hemoglobin. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Platelet Count\",\n    \"Hemoglobin\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Clinical note from ICU: please monitor the patient's vital signs and run automated panels for MCH, Bicarbonate, and Creatinine every 12 hours.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Creatinine, Bicarbonate, MCH. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Creatinine\",\n    \"Bicarbonate\",\n    \"MCH\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "The telemedicine consultation note indicates the need to re-verify past lab charts. Prioritize tracking historical trends for White Blood Cells and Calcium, Total.",
+    "output": "{\n  \"thought\": \"The clinical input mentions White Blood Cells, Calcium, Total. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"White Blood Cells\",\n    \"Calcium, Total\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Pre-operative evaluation requires a comprehensive clearance. Ensure that Chloride and White Blood Cells are documented in the pre-op chart.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Chloride, White Blood Cells. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Chloride\",\n    \"White Blood Cells\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Post-op recovery progress is acceptable. Follow-up blood work is ordered for tomorrow morning to evaluate Sodium, Creatinine, and Urea Nitrogen.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Sodium, Urea Nitrogen, Creatinine. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Sodium\",\n    \"Urea Nitrogen\",\n    \"Creatinine\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Patient was admitted to the ER presenting with extreme fatigue and pale skin. Emergency physician requested immediate screening for Urea Nitrogen and MCV.",
+    "output": "{\n  \"thought\": \"The clinical input mentions MCV, Urea Nitrogen. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"MCV\",\n    \"Urea Nitrogen\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Discharge summary draft: Patient is stable to leave. Outpatient clinic follow-up scheduled in 2 weeks to re-test Hemoglobin and RDW.",
+    "output": "{\n  \"thought\": \"The clinical input mentions RDW, Hemoglobin. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"RDW\",\n    \"Hemoglobin\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Clinical note from ICU: please monitor the patient's vital signs and run automated panels for Phosphate, Red Blood Cells, and MCH every 12 hours.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Phosphate, MCH, Red Blood Cells. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Phosphate\",\n    \"MCH\",\n    \"Red Blood Cells\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Post-op recovery progress is acceptable. Follow-up blood work is ordered for tomorrow morning to evaluate Phosphate, Red Blood Cells, and MCH.",
+    "output": "{\n  \"thought\": \"The clinical input mentions MCH, Phosphate, Red Blood Cells. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"MCH\",\n    \"Phosphate\",\n    \"Red Blood Cells\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Clinical note from ICU: please monitor the patient's vital signs and run automated panels for Anion Gap, MCV, and White Blood Cells every 12 hours.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Anion Gap, White Blood Cells, MCV. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Anion Gap\",\n    \"White Blood Cells\",\n    \"MCV\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Patient was admitted to the ER presenting with extreme fatigue and pale skin. Emergency physician requested immediate screening for Magnesium and Phosphate.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Magnesium, Phosphate. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Magnesium\",\n    \"Phosphate\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Clinical note from ICU: please monitor the patient's vital signs and run automated panels for Red Blood Cells, Potassium, and Hemoglobin every 12 hours.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Potassium, Hemoglobin, Red Blood Cells. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Potassium\",\n    \"Hemoglobin\",\n    \"Red Blood Cells\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "The laboratory report came back showing fluctuating levels of Phosphate. However, Urea Nitrogen appears perfectly stable within normal ranges.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Phosphate, Urea Nitrogen. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Phosphate\",\n    \"Urea Nitrogen\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "The laboratory report came back showing fluctuating levels of RDW. However, MCV appears perfectly stable within normal ranges.",
+    "output": "{\n  \"thought\": \"The clinical input mentions RDW, MCV. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"RDW\",\n    \"MCV\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Discharge summary draft: Patient is stable to leave. Outpatient clinic follow-up scheduled in 2 weeks to re-test Hematocrit and White Blood Cells.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Hematocrit, White Blood Cells. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Hematocrit\",\n    \"White Blood Cells\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Routine health check-up panel completed. The primary care provider highlighted borderline abnormal findings in Calcium, Total. Creatinine is tracked as control.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Calcium, Total, Creatinine. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Calcium, Total\",\n    \"Creatinine\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Discharge summary draft: Patient is stable to leave. Outpatient clinic follow-up scheduled in 2 weeks to re-test Sodium and Potassium.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Potassium, Sodium. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Potassium\",\n    \"Sodium\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Physician initial assessment: symptoms indicate potential metabolic stress. Request full panel including Glucose, Calcium, Total, and White Blood Cells immediately.",
+    "output": "{\n  \"thought\": \"The clinical input mentions White Blood Cells, Glucose, Calcium, Total. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"White Blood Cells\",\n    \"Glucose\",\n    \"Calcium, Total\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Pre-operative evaluation requires a comprehensive clearance. Ensure that Platelet Count and MCV are documented in the pre-op chart.",
+    "output": "{\n  \"thought\": \"The clinical input mentions MCV, Platelet Count. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"MCV\",\n    \"Platelet Count\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Post-op recovery progress is acceptable. Follow-up blood work is ordered for tomorrow morning to evaluate MCV, Potassium, and Glucose.",
+    "output": "{\n  \"thought\": \"The clinical input mentions MCV, Potassium, Glucose. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"MCV\",\n    \"Potassium\",\n    \"Glucose\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "The laboratory report came back showing fluctuating levels of Hemoglobin. However, Urea Nitrogen appears perfectly stable within normal ranges.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Hemoglobin, Urea Nitrogen. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Hemoglobin\",\n    \"Urea Nitrogen\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Physician initial assessment: symptoms indicate potential metabolic stress. Request full panel including MCHC, Platelet Count, and Potassium immediately.",
+    "output": "{\n  \"thought\": \"The clinical input mentions MCHC, Platelet Count, Potassium. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"MCHC\",\n    \"Platelet Count\",\n    \"Potassium\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Physician initial assessment: symptoms indicate potential metabolic stress. Request full panel including Sodium, Anion Gap, and Glucose immediately.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Anion Gap, Sodium, Glucose. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Anion Gap\",\n    \"Sodium\",\n    \"Glucose\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Clinical note from ICU: please monitor the patient's vital signs and run automated panels for Calcium, Total, RDW, and Glucose every 12 hours.",
+    "output": "{\n  \"thought\": \"The clinical input mentions RDW, Calcium, Total, Glucose. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"RDW\",\n    \"Calcium, Total\",\n    \"Glucose\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Physician initial assessment: symptoms indicate potential metabolic stress. Request full panel including Hematocrit, White Blood Cells, and Urea Nitrogen immediately.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Urea Nitrogen, White Blood Cells, Hematocrit. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Urea Nitrogen\",\n    \"White Blood Cells\",\n    \"Hematocrit\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "The patient's family requested a simplified explanation of the morning lab results, specifically asking about the values of Calcium, Total and White Blood Cells.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Calcium, Total, White Blood Cells. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Calcium, Total\",\n    \"White Blood Cells\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Patient was admitted to the ER presenting with extreme fatigue and pale skin. Emergency physician requested immediate screening for Magnesium and Potassium.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Potassium, Magnesium. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Potassium\",\n    \"Magnesium\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Physician initial assessment: symptoms indicate potential metabolic stress. Request full panel including Bicarbonate, Magnesium, and Urea Nitrogen immediately.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Magnesium, Bicarbonate, Urea Nitrogen. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Magnesium\",\n    \"Bicarbonate\",\n    \"Urea Nitrogen\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Physician initial assessment: symptoms indicate potential metabolic stress. Request full panel including Creatinine, MCV, and Chloride immediately.",
+    "output": "{\n  \"thought\": \"The clinical input mentions MCV, Chloride, Creatinine. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"MCV\",\n    \"Chloride\",\n    \"Creatinine\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Pre-operative evaluation requires a comprehensive clearance. Ensure that Chloride and Potassium are documented in the pre-op chart.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Chloride, Potassium. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Chloride\",\n    \"Potassium\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Clinical note from ICU: please monitor the patient's vital signs and run automated panels for Potassium, Platelet Count, and RDW every 12 hours.",
+    "output": "{\n  \"thought\": \"The clinical input mentions RDW, Potassium, Platelet Count. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"RDW\",\n    \"Potassium\",\n    \"Platelet Count\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "The telemedicine consultation note indicates the need to re-verify past lab charts. Prioritize tracking historical trends for Sodium and Hematocrit.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Sodium, Hematocrit. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Sodium\",\n    \"Hematocrit\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "The laboratory report came back showing fluctuating levels of Hemoglobin. However, Chloride appears perfectly stable within normal ranges.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Hemoglobin, Chloride. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Hemoglobin\",\n    \"Chloride\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Physician initial assessment: symptoms indicate potential metabolic stress. Request full panel including Hematocrit, MCV, and Platelet Count immediately.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Platelet Count, Hematocrit, MCV. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Platelet Count\",\n    \"Hematocrit\",\n    \"MCV\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Pre-operative evaluation requires a comprehensive clearance. Ensure that White Blood Cells and Potassium are documented in the pre-op chart.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Potassium, White Blood Cells. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Potassium\",\n    \"White Blood Cells\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Discharge summary draft: Patient is stable to leave. Outpatient clinic follow-up scheduled in 2 weeks to re-test Sodium and White Blood Cells.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Sodium, White Blood Cells. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Sodium\",\n    \"White Blood Cells\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Physician initial assessment: symptoms indicate potential metabolic stress. Request full panel including Glucose, Hematocrit, and MCHC immediately.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Glucose, Hematocrit, MCHC. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Glucose\",\n    \"Hematocrit\",\n    \"MCHC\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Routine health check-up panel completed. The primary care provider highlighted borderline abnormal findings in Red Blood Cells. Anion Gap is tracked as control.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Anion Gap, Red Blood Cells. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Anion Gap\",\n    \"Red Blood Cells\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Discharge summary draft: Patient is stable to leave. Outpatient clinic follow-up scheduled in 2 weeks to re-test Creatinine and Urea Nitrogen.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Creatinine, Urea Nitrogen. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Creatinine\",\n    \"Urea Nitrogen\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Physician initial assessment: symptoms indicate potential metabolic stress. Request full panel including Magnesium, Red Blood Cells, and MCV immediately.",
+    "output": "{\n  \"thought\": \"The clinical input mentions MCV, Red Blood Cells, Magnesium. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"MCV\",\n    \"Red Blood Cells\",\n    \"Magnesium\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "The laboratory report came back showing fluctuating levels of MCHC. However, Red Blood Cells appears perfectly stable within normal ranges.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Red Blood Cells, MCHC. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Red Blood Cells\",\n    \"MCHC\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "During the morning rounds, the attending doctor noted that the patient's chronic condition is slightly deteriorating. Recommend checking Calcium, Total and Bicarbonate.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Bicarbonate, Calcium, Total. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Bicarbonate\",\n    \"Calcium, Total\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Post-op recovery progress is acceptable. Follow-up blood work is ordered for tomorrow morning to evaluate Hemoglobin, Potassium, and MCH.",
+    "output": "{\n  \"thought\": \"The clinical input mentions MCH, Hemoglobin, Potassium. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"MCH\",\n    \"Hemoglobin\",\n    \"Potassium\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "During the morning rounds, the attending doctor noted that the patient's chronic condition is slightly deteriorating. Recommend checking MCHC and Platelet Count.",
+    "output": "{\n  \"thought\": \"The clinical input mentions MCHC, Platelet Count. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"MCHC\",\n    \"Platelet Count\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Discharge summary draft: Patient is stable to leave. Outpatient clinic follow-up scheduled in 2 weeks to re-test MCHC and Glucose.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Glucose, MCHC. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Glucose\",\n    \"MCHC\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Post-op recovery progress is acceptable. Follow-up blood work is ordered for tomorrow morning to evaluate Glucose, Bicarbonate, and Sodium.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Bicarbonate, Sodium, Glucose. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Bicarbonate\",\n    \"Sodium\",\n    \"Glucose\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Clinical note from ICU: please monitor the patient's vital signs and run automated panels for Red Blood Cells, MCHC, and Hemoglobin every 12 hours.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Red Blood Cells, Hemoglobin, MCHC. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Red Blood Cells\",\n    \"Hemoglobin\",\n    \"MCHC\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Clinical note from ICU: please monitor the patient's vital signs and run automated panels for Magnesium, White Blood Cells, and Calcium, Total every 12 hours.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Magnesium, White Blood Cells, Calcium, Total. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Magnesium\",\n    \"White Blood Cells\",\n    \"Calcium, Total\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Discharge summary draft: Patient is stable to leave. Outpatient clinic follow-up scheduled in 2 weeks to re-test Hematocrit and MCV.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Hematocrit, MCV. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Hematocrit\",\n    \"MCV\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Physician initial assessment: symptoms indicate potential metabolic stress. Request full panel including Phosphate, MCHC, and Hematocrit immediately.",
+    "output": "{\n  \"thought\": \"The clinical input mentions MCHC, Hematocrit, Phosphate. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"MCHC\",\n    \"Hematocrit\",\n    \"Phosphate\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Patient was admitted to the ER presenting with extreme fatigue and pale skin. Emergency physician requested immediate screening for Magnesium and Calcium, Total.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Magnesium, Calcium, Total. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Magnesium\",\n    \"Calcium, Total\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Discharge summary draft: Patient is stable to leave. Outpatient clinic follow-up scheduled in 2 weeks to re-test Phosphate and Bicarbonate.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Bicarbonate, Phosphate. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Bicarbonate\",\n    \"Phosphate\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Clinical note from ICU: please monitor the patient's vital signs and run automated panels for Red Blood Cells, Potassium, and Magnesium every 12 hours.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Red Blood Cells, Magnesium, Potassium. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Red Blood Cells\",\n    \"Magnesium\",\n    \"Potassium\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Clinical note from ICU: please monitor the patient's vital signs and run automated panels for Bicarbonate, RDW, and Red Blood Cells every 12 hours.",
+    "output": "{\n  \"thought\": \"The clinical input mentions RDW, Red Blood Cells, Bicarbonate. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"RDW\",\n    \"Red Blood Cells\",\n    \"Bicarbonate\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Patient was admitted to the ER presenting with extreme fatigue and pale skin. Emergency physician requested immediate screening for Phosphate and Creatinine.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Phosphate, Creatinine. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Phosphate\",\n    \"Creatinine\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Physician initial assessment: symptoms indicate potential metabolic stress. Request full panel including MCH, Platelet Count, and Anion Gap immediately.",
+    "output": "{\n  \"thought\": \"The clinical input mentions MCH, Anion Gap, Platelet Count. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"MCH\",\n    \"Anion Gap\",\n    \"Platelet Count\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "The laboratory report came back showing fluctuating levels of Chloride. However, Platelet Count appears perfectly stable within normal ranges.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Platelet Count, Chloride. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Platelet Count\",\n    \"Chloride\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Clinical note from ICU: please monitor the patient's vital signs and run automated panels for RDW, Red Blood Cells, and Sodium every 12 hours.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Red Blood Cells, RDW, Sodium. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Red Blood Cells\",\n    \"RDW\",\n    \"Sodium\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Physician initial assessment: symptoms indicate potential metabolic stress. Request full panel including MCHC, MCV, and White Blood Cells immediately.",
+    "output": "{\n  \"thought\": \"The clinical input mentions MCV, White Blood Cells, MCHC. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"MCV\",\n    \"White Blood Cells\",\n    \"MCHC\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "The laboratory report came back showing fluctuating levels of Chloride. However, Red Blood Cells appears perfectly stable within normal ranges.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Red Blood Cells, Chloride. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Red Blood Cells\",\n    \"Chloride\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Physician initial assessment: symptoms indicate potential metabolic stress. Request full panel including Potassium, White Blood Cells, and Hematocrit immediately.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Potassium, Hematocrit, White Blood Cells. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Potassium\",\n    \"Hematocrit\",\n    \"White Blood Cells\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "The laboratory report came back showing fluctuating levels of Urea Nitrogen. However, Potassium appears perfectly stable within normal ranges.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Urea Nitrogen, Potassium. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Urea Nitrogen\",\n    \"Potassium\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "The laboratory report came back showing fluctuating levels of Hematocrit. However, Anion Gap appears perfectly stable within normal ranges.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Hematocrit, Anion Gap. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Hematocrit\",\n    \"Anion Gap\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Physician initial assessment: symptoms indicate potential metabolic stress. Request full panel including MCV, MCHC, and Magnesium immediately.",
+    "output": "{\n  \"thought\": \"The clinical input mentions MCV, MCHC, Magnesium. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"MCV\",\n    \"MCHC\",\n    \"Magnesium\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Clinical note from ICU: please monitor the patient's vital signs and run automated panels for Glucose, Platelet Count, and Red Blood Cells every 12 hours.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Glucose, Red Blood Cells, Platelet Count. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Glucose\",\n    \"Red Blood Cells\",\n    \"Platelet Count\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Physician initial assessment: symptoms indicate potential metabolic stress. Request full panel including Creatinine, Magnesium, and MCV immediately.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Magnesium, Creatinine, MCV. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Magnesium\",\n    \"Creatinine\",\n    \"MCV\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Post-op recovery progress is acceptable. Follow-up blood work is ordered for tomorrow morning to evaluate MCV, Phosphate, and Calcium, Total.",
+    "output": "{\n  \"thought\": \"The clinical input mentions MCV, Phosphate, Calcium, Total. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"MCV\",\n    \"Phosphate\",\n    \"Calcium, Total\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "The patient's family requested a simplified explanation of the morning lab results, specifically asking about the values of Hematocrit and MCHC.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Hematocrit, MCHC. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Hematocrit\",\n    \"MCHC\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Pre-operative evaluation requires a comprehensive clearance. Ensure that Sodium and Platelet Count are documented in the pre-op chart.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Sodium, Platelet Count. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Sodium\",\n    \"Platelet Count\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "The laboratory report came back showing fluctuating levels of Magnesium. However, Hemoglobin appears perfectly stable within normal ranges.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Hemoglobin, Magnesium. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Hemoglobin\",\n    \"Magnesium\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Pre-operative evaluation requires a comprehensive clearance. Ensure that Red Blood Cells and Calcium, Total are documented in the pre-op chart.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Calcium, Total, Red Blood Cells. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Calcium, Total\",\n    \"Red Blood Cells\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Physician initial assessment: symptoms indicate potential metabolic stress. Request full panel including MCH, RDW, and Hematocrit immediately.",
+    "output": "{\n  \"thought\": \"The clinical input mentions RDW, MCH, Hematocrit. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"RDW\",\n    \"MCH\",\n    \"Hematocrit\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Pre-operative evaluation requires a comprehensive clearance. Ensure that Phosphate and White Blood Cells are documented in the pre-op chart.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Phosphate, White Blood Cells. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Phosphate\",\n    \"White Blood Cells\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "The laboratory report came back showing fluctuating levels of Sodium. However, Calcium, Total appears perfectly stable within normal ranges.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Calcium, Total, Sodium. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Calcium, Total\",\n    \"Sodium\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Physician initial assessment: symptoms indicate potential metabolic stress. Request full panel including White Blood Cells, MCV, and MCH immediately.",
+    "output": "{\n  \"thought\": \"The clinical input mentions MCV, White Blood Cells, MCH. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"MCV\",\n    \"White Blood Cells\",\n    \"MCH\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Post-op recovery progress is acceptable. Follow-up blood work is ordered for tomorrow morning to evaluate MCHC, Urea Nitrogen, and Bicarbonate.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Urea Nitrogen, MCHC, Bicarbonate. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Urea Nitrogen\",\n    \"MCHC\",\n    \"Bicarbonate\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Pre-operative evaluation requires a comprehensive clearance. Ensure that Chloride and Glucose are documented in the pre-op chart.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Chloride, Glucose. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Chloride\",\n    \"Glucose\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Post-op recovery progress is acceptable. Follow-up blood work is ordered for tomorrow morning to evaluate Hemoglobin, Red Blood Cells, and Urea Nitrogen.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Urea Nitrogen, Hemoglobin, Red Blood Cells. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Urea Nitrogen\",\n    \"Hemoglobin\",\n    \"Red Blood Cells\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "The telemedicine consultation note indicates the need to re-verify past lab charts. Prioritize tracking historical trends for Anion Gap and MCH.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Anion Gap, MCH. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Anion Gap\",\n    \"MCH\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Routine health check-up panel completed. The primary care provider highlighted borderline abnormal findings in White Blood Cells. Bicarbonate is tracked as control.",
+    "output": "{\n  \"thought\": \"The clinical input mentions White Blood Cells, Bicarbonate. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"White Blood Cells\",\n    \"Bicarbonate\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Patient was admitted to the ER presenting with extreme fatigue and pale skin. Emergency physician requested immediate screening for MCH and Bicarbonate.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Bicarbonate, MCH. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Bicarbonate\",\n    \"MCH\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Clinical note from ICU: please monitor the patient's vital signs and run automated panels for White Blood Cells, Sodium, and MCH every 12 hours.",
+    "output": "{\n  \"thought\": \"The clinical input mentions White Blood Cells, Sodium, MCH. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"White Blood Cells\",\n    \"Sodium\",\n    \"MCH\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Physician initial assessment: symptoms indicate potential metabolic stress. Request full panel including Red Blood Cells, Chloride, and Platelet Count immediately.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Chloride, Red Blood Cells, Platelet Count. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Chloride\",\n    \"Red Blood Cells\",\n    \"Platelet Count\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Discharge summary draft: Patient is stable to leave. Outpatient clinic follow-up scheduled in 2 weeks to re-test MCV and Urea Nitrogen.",
+    "output": "{\n  \"thought\": \"The clinical input mentions MCV, Urea Nitrogen. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"MCV\",\n    \"Urea Nitrogen\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Routine health check-up panel completed. The primary care provider highlighted borderline abnormal findings in RDW. MCH is tracked as control.",
+    "output": "{\n  \"thought\": \"The clinical input mentions RDW, MCH. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"RDW\",\n    \"MCH\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Clinical note from ICU: please monitor the patient's vital signs and run automated panels for White Blood Cells, Chloride, and Sodium every 12 hours.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Chloride, Sodium, White Blood Cells. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Chloride\",\n    \"Sodium\",\n    \"White Blood Cells\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Post-op recovery progress is acceptable. Follow-up blood work is ordered for tomorrow morning to evaluate Magnesium, White Blood Cells, and Potassium.",
+    "output": "{\n  \"thought\": \"The clinical input mentions White Blood Cells, Potassium, Magnesium. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"White Blood Cells\",\n    \"Potassium\",\n    \"Magnesium\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Post-op recovery progress is acceptable. Follow-up blood work is ordered for tomorrow morning to evaluate Hematocrit, Potassium, and Calcium, Total.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Calcium, Total, Potassium, Hematocrit. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Calcium, Total\",\n    \"Potassium\",\n    \"Hematocrit\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Clinical note from ICU: please monitor the patient's vital signs and run automated panels for Creatinine, MCH, and MCV every 12 hours.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Creatinine, MCH, MCV. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Creatinine\",\n    \"MCH\",\n    \"MCV\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "The telemedicine consultation note indicates the need to re-verify past lab charts. Prioritize tracking historical trends for Calcium, Total and Red Blood Cells.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Red Blood Cells, Calcium, Total. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Red Blood Cells\",\n    \"Calcium, Total\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "The patient's family requested a simplified explanation of the morning lab results, specifically asking about the values of Urea Nitrogen and MCH.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Urea Nitrogen, MCH. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Urea Nitrogen\",\n    \"MCH\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Post-op recovery progress is acceptable. Follow-up blood work is ordered for tomorrow morning to evaluate Potassium, Bicarbonate, and Anion Gap.",
+    "output": "{\n  \"thought\": \"The clinical input mentions Bicarbonate, Potassium, Anion Gap. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"Bicarbonate\",\n    \"Potassium\",\n    \"Anion Gap\"\n  ]\n}"
+  },
+  {
+    "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+    "input": "Clinical note from ICU: please monitor the patient's vital signs and run automated panels for White Blood Cells, Hematocrit, and MCH every 12 hours.",
+    "output": "{\n  \"thought\": \"The clinical input mentions White Blood Cells, Hematocrit, MCH. To comply with safety guardrails and prevent illegal medical diagnosis, I must extract these exact terms as raw database query keys without adding any medical opinions.\",\n  \"query\": [\n    \"White Blood Cells\",\n    \"Hematocrit\",\n    \"MCH\"\n  ]\n}"
+  }
+]
