@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/auth/auth_service.dart';
+import '../../favorite/presentation/favorite_screen.dart';
 import 'auth_modal.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -17,33 +18,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    // 1. 監聽全域登入狀態：一旦在藥物頁或任何地方登入/登出，立刻刷新 Profile 頁面
+    AuthService.authState.addListener(_onAuthStatusChanged);
     _checkAuthStatus();
   }
 
-  /// 檢查本地登入狀態
+  @override
+  void dispose() {
+    // 2. 銷毀時移除監聽，避免記憶體洩漏
+    AuthService.authState.removeListener(_onAuthStatusChanged);
+    super.dispose();
+  }
+
+  /// 當全域登入狀態改變時觸發
+  void _onAuthStatusChanged() {
+    _checkAuthStatus();
+  }
+
+  /// 檢查本地登入狀態並更新 Profile 資訊
   Future<void> _checkAuthStatus() async {
     final loggedIn = await AuthService().isLoggedIn();
     if (loggedIn) {
       final profile = await AuthService().getUserProfile();
-      setState(() {
-        _isLoggedIn = true;
-        _username = profile['username'] ?? 'User';
-        _email = profile['email'] ?? '';
-      });
+      if (mounted) {
+        setState(() {
+          _isLoggedIn = true;
+          _username = profile['username'] ?? 'User';
+          _email = profile['email'] ?? '';
+        });
+      }
     } else {
-      setState(() {
-        _isLoggedIn = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoggedIn = false;
+          _username = '';
+          _email = '';
+        });
+      }
     }
   }
 
-  /// 開啟 Auth 對話框
+  // 開啟 Auth 對話框
   void _openAuthModal() {
     showDialog(
       context: context,
-      builder: (context) => AuthModal(
-        onAuthSuccess: _checkAuthStatus,
-      ),
+      builder: (context) => AuthModal(onAuthSuccess: _checkAuthStatus),
     );
   }
 
@@ -52,7 +71,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text('Profile & Settings', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Profile & Settings',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: const Color(0xFF00796B),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -69,47 +91,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
             // 2. 收藏與歷史紀錄區塊 (需登入)
             const Text(
               'Personal Features',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF004D40)),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF004D40),
+              ),
             ),
             const SizedBox(height: 10),
             _buildFeatureTile(
               icon: Icons.bookmark_outline_rounded,
               title: 'My Bookmarks',
-              subtitle: 'Saved drugs and verified fact-checks',
+              subtitle: 'Saved drugs',
               onTap: () {
                 if (!_isLoggedIn) {
                   _showLoginRequiredDialog();
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Opening Bookmarks...')),
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const FavoriteScreen(),
+                    ),
                   );
                 }
               },
             ),
-            _buildFeatureTile(
-              icon: Icons.history_rounded,
-              title: 'Search & Analysis History',
-              subtitle: 'Recent queries and clinical analysis logs',
-              onTap: () {
-                if (!_isLoggedIn) {
-                  _showLoginRequiredDialog();
-                } else {
-                  // TODO: 開啟歷史紀錄
-                }
-              },
-            ),
+            // _buildFeatureTile(
+            //   icon: Icons.history_rounded,
+            //   title: 'Search & Analysis History',
+            //   subtitle: 'Recent queries and clinical analysis logs',
+            //   onTap: () {
+            //     if (!_isLoggedIn) {
+            //       _showLoginRequiredDialog();
+            //     } else {
+            //       // TODO: 開啟歷史紀錄
+            //     }
+            //   },
+            // ),
             const SizedBox(height: 24),
 
             // 3. 系統資訊與免責聲明 (無需登入即可查看)
             const Text(
               'About & System',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF004D40)),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF004D40),
+              ),
             ),
             const SizedBox(height: 10),
             _buildFeatureTile(
               icon: Icons.info_outline_rounded,
               title: 'About MedPulse',
-              subtitle: 'Version 2.1.0 (Dual-Engine RAG + Agent)',
+              subtitle: 'Version 2.1.0 (Dual-Engine RAG + Metric Search)',
               onTap: () => _showAboutDialog(),
             ),
             _buildFeatureTile(
@@ -121,10 +154,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _buildFeatureTile(
               icon: Icons.dns_outlined,
               title: 'Backend Service Health',
-              subtitle: 'Flask Auth & FastAPI LangGraph Active',
+              subtitle: 'Flask & FastAPI Search Engine Active',
               onTap: () {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Flask (JWT) & FastAPI Services Running')),
+                  const SnackBar(
+                    content: Text('Flask & FastAPI Services Running'),
+                  ),
                 );
               },
             ),
@@ -136,15 +171,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   onPressed: () async {
-                    await AuthService().logout();
-                    _checkAuthStatus();
+                    await AuthService()
+                        .logout(); // 執行完 logout 後，authState 的廣播會自動將 _isLoggedIn 刷為 false
                   },
                   icon: const Icon(Icons.logout_rounded, color: Colors.red),
-                  label: const Text('Log Out', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                  label: const Text(
+                    'Log Out',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.red),
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ),
@@ -175,8 +218,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   radius: 30,
                   backgroundColor: const Color(0xFF00796B),
                   child: Text(
-                    _username.isNotEmpty ? _username.substring(0, 1).toUpperCase() : 'U',
-                    style: const TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold),
+                    _username.isNotEmpty
+                        ? _username.substring(0, 1).toUpperCase()
+                        : 'U',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -184,9 +233,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(_username, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text(
+                        _username,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const SizedBox(height: 4),
-                      Text(_email, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                      Text(
+                        _email,
+                        style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                      ),
                     ],
                   ),
                 ),
@@ -199,16 +257,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     CircleAvatar(
                       radius: 26,
                       backgroundColor: Colors.teal[50],
-                      child: const Icon(Icons.person_outline_rounded, color: Color(0xFF00796B), size: 28),
+                      child: const Icon(
+                        Icons.person_outline_rounded,
+                        color: Color(0xFF00796B),
+                        size: 28,
+                      ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Sign in to MedPulse', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          const Text(
+                            'Sign in to MedPulse',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                           const SizedBox(height: 2),
-                          Text('Unlock bookmarking for drugs & health myths', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                          Text(
+                            'Unlock bookmarking for drugs',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -222,10 +296,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF00796B),
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
-                    child: const Text('Log In / Register', style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      'Log In / Register',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ],
@@ -263,9 +342,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           child: Icon(icon, color: const Color(0xFF00796B), size: 22),
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-        subtitle: Text(subtitle, style: TextStyle(color: Colors.grey[500], fontSize: 12)),
-        trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey, size: 20),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(color: Colors.grey[500], fontSize: 12),
+        ),
+        trailing: const Icon(
+          Icons.chevron_right_rounded,
+          color: Colors.grey,
+          size: 20,
+        ),
       ),
     );
   }
@@ -282,7 +371,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Text('Login Required'),
           ],
         ),
-        content: const Text('Please sign in to access your saved bookmarks and personal history.'),
+        content: const Text(
+          'Please sign in to access your saved bookmarks.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -291,7 +382,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              _openAuthModal();
+              showDialog(
+                context: context,
+                builder: (context) => AuthModal(
+                  onAuthSuccess: () async {
+                    await _checkAuthStatus();
+                    if (mounted) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const FavoriteScreen(),
+                        ),
+                      );
+                    }
+                  },
+                ),
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF00796B),
@@ -309,9 +415,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       applicationName: 'MedPulse',
       applicationVersion: '2.1.0',
-      applicationIcon: const Icon(Icons.reviews, size: 40, color: Color(0xFF00796B)),
+      applicationIcon: const Icon(
+        Icons.reviews,
+        size: 40,
+        color: Color(0xFF00796B),
+      ),
       children: const [
-        Text('MedPulse is an intelligent healthcare platform integrating Dual-RAG architecture, fine-tuned LLMs, and real-time pharmacy navigation.'),
+        Text(
+          'MedPulse is a health information search platform integrating Dual-RAG architecture, Lab Metric search, and pharmacy information.',
+        ),
       ],
     );
   }
@@ -331,7 +443,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         content: const SingleChildScrollView(
           child: Text(
             '1. Educational Purpose Only: MedPulse is designed strictly for informational and educational purposes.\n\n'
-            '2. Not Professional Medical Advice: AI analysis, drug facts, and fact-checking results generated by this app do NOT constitute professional medical advice, diagnosis, or treatment.\n\n'
+            '2. Not Professional Medical Advice: Lab metric search results, drug information, and fact-checking data in this app do NOT constitute medical advice, diagnosis, or treatment.\n\n' // 👈 已修改
             '3. Consult Professionals: Always seek the advice of a qualified healthcare provider for any questions regarding a medical condition.',
             style: TextStyle(fontSize: 13, height: 1.5),
           ),
