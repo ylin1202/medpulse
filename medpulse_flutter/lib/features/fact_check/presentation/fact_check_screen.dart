@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/widgets/pagination_bar.dart';
 import '../data/fact_check_model.dart';
 import 'fact_check_detail_screen.dart';
 
@@ -21,7 +23,7 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
 
   // 快捷 Prompt 建議標籤
   final List<String> _suggestedPrompts = [
-    'Celery juice for blood pressure?',
+    'Vitamin D prevents cold?',
     'Mammogram false positives',
     'Vaccine side effects',
   ];
@@ -35,70 +37,114 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchFactChecks();
+    _fetchFactChecks(); // 預設進來撈取一般清單
   }
 
-  /// 執行搜尋 (預設列表 或 RAG 語意搜尋)
+  /// 1. 預設模式：一般 SQL / API 搜尋 (GET /fact-checks)
   Future<void> _fetchFactChecks({String? query, int page = 1}) async {
     setState(() => _isLoading = true);
 
     final String keyword = (query ?? _searchController.text).trim();
 
     try {
-      if (keyword.isNotEmpty) {
-        // RAG 語意搜尋模式
-        print('[RAG Vector Search] Query: "$keyword"');
+      debugPrint('[Fact-Check Normal Search] Fetching page $page, keyword: "$keyword"');
 
-        final response = await ApiClient().dio.get(
-          '/fact-checks',
-          queryParameters: {'q': keyword, 'page': page, 'limit': _limit},
-        );
+      final response = await ApiClient().dio.get(
+        '/fact-checks',
+        queryParameters: {
+          if (keyword.isNotEmpty) 'q': keyword,
+          'page': page,
+          'limit': _limit,
+        },
+      );
 
-        if (response.statusCode == 200) {
-          final List rawData = response.data['data'] ?? [];
-          final pagination = response.data['pagination'] ?? {};
+      if (response.statusCode == 200 && mounted) {
+        final List rawData = response.data['data'] ?? [];
+        final pagination = response.data['pagination'] ?? {};
 
-          setState(() {
-            _claims = rawData.map((e) => FactCheckModel.fromJson(e)).toList();
-            _currentPage = pagination['page'] ?? page;
-            _totalPages = pagination['total_pages'] ?? 1;
-            _totalItems = pagination['total'] ?? _claims.length;
-            _isRagSearchResult = true;
-            _aiSummary =
-                'Retrieved ${_claims.length} verified evidence sources for "$keyword".';
-            _isLoading = false;
-          });
-        }
-      } else {
-        // 💡 預設列表模式
-        print('[Fact-Check] Fetching page $page');
-
-        final response = await ApiClient().dio.get(
-          '/fact-checks',
-          queryParameters: {'page': page, 'limit': _limit},
-        );
-
-        if (response.statusCode == 200) {
-          final List rawData = response.data['data'] ?? [];
-          final pagination = response.data['pagination'] ?? {};
-
-          setState(() {
-            _claims = rawData.map((e) => FactCheckModel.fromJson(e)).toList();
-            _currentPage = pagination['page'] ?? page;
-            _totalPages = pagination['total_pages'] ?? 1;
-            _totalItems = pagination['total'] ?? _claims.length;
-            _isRagSearchResult = false;
-            _aiSummary = null;
-            _isLoading = false;
-          });
-        }
+        setState(() {
+          _claims = rawData.map((e) => FactCheckModel.fromJson(e)).toList();
+          _currentPage = pagination['page'] ?? page;
+          _totalPages = pagination['total_pages'] ?? 1;
+          _totalItems = pagination['total'] ?? _claims.length;
+          _isRagSearchResult = false; // 標示為一般結果
+          _aiSummary = null;
+          _isLoading = false;
+        });
       }
     } catch (e) {
-      print('[Fact-Check Error]: $e');
-      setState(() {
-        _claims = [];
-        _isLoading = false;
-      });
+      debugPrint('[Fact-Check Normal Error]: $e');
+      if (mounted) {
+        setState(() {
+          _claims = [];
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  /// 2. RAG 專屬模式：觸發 AI 語意向量檢索 (POST /api/v1/factcheck)
+  Future<void> _triggerRagSearch({String? query}) async {
+    final String keyword = (query ?? _searchController.text).trim();
+
+    if (keyword.isEmpty) {
+      _fetchFactChecks(page: 1); // 空字串切回預設列表
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      debugPrint('[RAG Vector Search] Querying FastAPI for: "$keyword"');
+
+      final fastapiDio = Dio(
+        BaseOptions(
+          baseUrl: '',
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 10),
+          headers: {'Content-Type': 'application/json'},
+        ),
+      );
+
+      final response = await fastapiDio.post(
+        '/api/v1/factcheck',
+        data: {'query': keyword},
+      );
+
+      if (response.statusCode == 200 && mounted) {
+        final List rawData = response.data['data'] ?? [];
+
+        setState(() {
+          _claims = rawData.map((e) => FactCheckModel.fromJson(e)).toList();
+          _currentPage = 1;
+          _totalPages = 1;
+          _totalItems = _claims.length;
+          _isRagSearchResult = true;
+
+          if (_claims.isNotEmpty && _claims.first.score != null) {
+            final scorePercent =
+                (_claims.first.score! * 100).toStringAsFixed(1);
+            _aiSummary =
+                'Matched verified evidence with $scorePercent% confidence.';
+          } else if (_claims.isNotEmpty) {
+            _aiSummary =
+                'Retrieved ${_claims.length} vector-matched evidence sources.';
+          } else {
+            _aiSummary =
+                'No relevant medical fact-check found for "$keyword".';
+          }
+
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('[RAG Vector Search Error]: $e');
+      if (mounted) {
+        setState(() {
+          _claims = [];
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -204,7 +250,7 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
                     ),
                     const SizedBox(width: 8),
 
-                    // AI RAG 按鈕
+                    // AI RAG 按鈕 (改為 AI Search，專業度更高)
                     Container(
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
@@ -220,17 +266,14 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
                         ],
                       ),
                       child: ElevatedButton.icon(
-                        onPressed: () => _fetchFactChecks(
-                          query: _searchController.text,
-                          page: 1,
-                        ),
+                        onPressed: () => _triggerRagSearch(),
                         icon: const Icon(
-                          Icons.light,
+                          Icons.lightbulb_outline,
                           size: 16,
                           color: Colors.amberAccent,
                         ),
                         label: const Text(
-                          'Press',
+                          'AI Search',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
@@ -264,7 +307,7 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
                         child: InkWell(
                           onTap: () {
                             _searchController.text = prompt;
-                            _fetchFactChecks(query: prompt, page: 1);
+                            _triggerRagSearch(query: prompt);
                           },
                           child: Container(
                             padding: const EdgeInsets.symmetric(
@@ -282,8 +325,8 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
                             child: Row(
                               children: [
                                 const Icon(
-                                  Icons.north_west,
-                                  size: 10,
+                                  Icons.search,
+                                  size: 11,
                                   color: Colors.white70,
                                 ),
                                 const SizedBox(width: 4),
@@ -383,19 +426,11 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
                     fontSize: 14,
                   ),
                 ),
-                Text(
-                  'Total: $_totalItems',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
               ],
             ),
           ),
 
-          // 3. 乾淨純粹的卡片列表（無來源 URL）
+          // 3. 卡片列表
           Expanded(
             child: _isLoading
                 ? const Center(
@@ -413,7 +448,7 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'No semantic matches found.',
+                          'No matched evidence found.',
                           style: TextStyle(
                             color: Colors.grey[500],
                             fontSize: 14,
@@ -451,10 +486,7 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                // 左側彩條
                                 Container(width: 5, color: themeColor),
-
-                                // 卡片主體
                                 Expanded(
                                   child: InkWell(
                                     onTap: () {
@@ -474,7 +506,6 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          // 頂部列：僅保留判定標籤 (與 RAG 向量標籤)
                                           Row(
                                             mainAxisAlignment:
                                                 MainAxisAlignment.spaceBetween,
@@ -507,7 +538,6 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
                                                   ),
                                                 ),
                                               ),
-
                                               if (_isRagSearchResult)
                                                 Container(
                                                   padding:
@@ -554,8 +584,6 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
                                             ],
                                           ),
                                           const SizedBox(height: 10),
-
-                                          // 宣稱內容 (Claim)
                                           Text(
                                             item.claim,
                                             style: const TextStyle(
@@ -565,8 +593,6 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
                                               color: Colors.black87,
                                             ),
                                           ),
-
-                                          // 摘要內文 (Summary)
                                           if (item.summary.isNotEmpty) ...[
                                             const SizedBox(height: 6),
                                             Text(
@@ -594,47 +620,12 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
                   ),
           ),
 
-          // 4. 底部分頁控制
-          if (_totalPages > 1)
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 6,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios, size: 15),
-                    onPressed: _currentPage > 1
-                        ? () => _fetchFactChecks(page: _currentPage - 1)
-                        : null,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Page $_currentPage of $_totalPages',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.arrow_forward_ios, size: 15),
-                    onPressed: _currentPage < _totalPages
-                        ? () => _fetchFactChecks(page: _currentPage + 1)
-                        : null,
-                  ),
-                ],
-              ),
+          // 4. 底部分頁控制 (通用元件)
+          if (!_isRagSearchResult)
+            PaginationBar(
+              currentPage: _currentPage,
+              totalPages: _totalPages,
+              onPageChanged: (newPage) => _fetchFactChecks(page: newPage),
             ),
         ],
       ),

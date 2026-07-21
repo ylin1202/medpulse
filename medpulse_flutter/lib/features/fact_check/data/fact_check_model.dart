@@ -1,3 +1,4 @@
+// fact_check_model.dart
 class FactCheckModel {
   final String id;
   final String claim;
@@ -6,7 +7,7 @@ class FactCheckModel {
   final String explanation;
   final String source;
   final String claimUrl;
-  final double? score; // RAG 語意相似度分數 (例如 0.85)
+  final double? score;
 
   FactCheckModel({
     required this.id,
@@ -22,13 +23,15 @@ class FactCheckModel {
   factory FactCheckModel.fromJson(Map<String, dynamic> json) {
     return FactCheckModel(
       id: json['id']?.toString() ?? '',
-      claim: json['claim'] ?? json['title'] ?? '',
-      verdict: json['label'] ?? json['verdict'] ?? 'Unverified',
-      summary: json['main_text'] ?? json['summary'] ?? '',
+      claim: json['claim'] ?? json['matched_claim'] ?? json['title'] ?? 'No Claim',
+      verdict: json['verdict'] ?? json['label'] ?? 'UNVERIFIED',
+      summary: json['summary'] ?? json['explanation'] ?? '',
       explanation: json['explanation'] ?? json['detail'] ?? '',
-      source: json['sources'] ?? json['source'] ?? 'Medical Fact-Check Center',
-      claimUrl: json['claim_url'] ?? '',
-      score: json['score'] != null ? (json['score'] as num).toDouble() : null,
+      source: json['source'] ?? 'Medical Fact-Check Center',
+      claimUrl: json['claim_url'] ?? json['source_url'] ?? '',
+      score: json['score'] != null 
+          ? (json['score'] as num).toDouble() 
+          : (json['similarity_score'] != null ? (json['similarity_score'] as num).toDouble() : null),
     );
   }
 }
