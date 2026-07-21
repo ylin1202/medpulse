@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'map/presentation/pharmacy_map_screen.dart';
 import 'drug/presentation/drug_search_screen.dart';
 import 'fact_check/presentation/fact_check_screen.dart';
-import 'ai_agent/presentation/ai_agent_screen.dart';
+import 'lab_metric/presentation/lab_metric_screen.dart';
 import 'profile/presentation/profile_screen.dart';
 
 /// 應用程式底部導覽列 (Bottom Navigation) 主頁面
@@ -63,7 +63,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.smart_toy_outlined),
             activeIcon: Icon(Icons.smart_toy),
-            label: 'AI Agent',
+            label: 'Lab Metrics',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
