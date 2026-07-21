@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../network/api_client.dart';
 
@@ -5,6 +6,9 @@ class AuthService {
   static final AuthService _instance = AuthService._internal();
   factory AuthService() => _instance;
   AuthService._internal();
+
+  // 全域 Auth 狀態監聽器 (發送 true/false)
+  static final ValueNotifier<bool> authState = ValueNotifier<bool>(false);
 
   static const String _keyToken = 'jwt_token';
   static const String _keyUserId = 'user_id';
@@ -24,7 +28,10 @@ class AuthService {
       }
       return {'success': false, 'message': 'Failed to send verification code'};
     } catch (e) {
-      return {'success': false, 'message': 'Network error. Make sure server is running.'};
+      return {
+        'success': false,
+        'message': 'Network error. Make sure server is running.',
+      };
     }
   }
 
@@ -58,11 +65,14 @@ class AuthService {
       }
       return {'success': false, 'message': 'Registration failed'};
     } catch (e) {
-      return {'success': false, 'message': 'Invalid verification code or registration failed'};
+      return {
+        'success': false,
+        'message': 'Invalid verification code or registration failed',
+      };
     }
   }
 
-  /// 登入 API (POST /api/v1/auth/login)
+  /// 3. 登入 API (POST /api/v1/auth/login)
   Future<Map<String, dynamic>> login({
     required String email,
     required String password,
@@ -70,10 +80,7 @@ class AuthService {
     try {
       final response = await ApiClient().flaskDio.post(
         '/auth/login',
-        data: {
-          'email': email,
-          'password': password,
-        },
+        data: {'email': email, 'password': password},
       );
 
       if (response.statusCode == 200) {
@@ -88,7 +95,10 @@ class AuthService {
       }
       return {'success': false, 'message': 'Invalid email or password'};
     } catch (e) {
-      return {'success': false, 'message': 'Login failed. Check server or credentials.'};
+      return {
+        'success': false,
+        'message': 'Login failed. Check server or credentials.',
+      };
     }
   }
 
@@ -105,20 +115,33 @@ class AuthService {
     await prefs.setString(_keyUsername, username);
     await prefs.setString(_keyEmail, email);
 
-    // 登入後自動把 Bearer Token 加到 Flask Dio Header
-    ApiClient().flaskDio.options.headers['Authorization'] = 'Bearer $token';
+    // 登入/註冊成功寫入資料後，通知全系統「已登入」
+    authState.value = true;
   }
 
   /// 檢查是否已登入
   Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString(_keyToken);
-    if (token != null && token.isNotEmpty) {
-      // 復原 Authorization Header
-      ApiClient().flaskDio.options.headers['Authorization'] = 'Bearer $token';
-      return true;
+    final loggedIn = token != null && token.isNotEmpty;
+    
+    // 如果當前狀態不一致，更新全域 authState
+    if (authState.value != loggedIn) {
+      authState.value = loggedIn;
     }
-    return false;
+    return loggedIn;
+  }
+
+  /// 登出
+  Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+
+    // 移除 Header 中的 Token (防呆)
+    ApiClient().flaskDio.options.headers.remove('Authorization');
+
+    // 強制切換為 false，瞬間觸發全系統「登出」廣播
+    authState.value = false;
   }
 
   /// 取得當前用戶資訊
@@ -129,12 +152,5 @@ class AuthService {
       'username': prefs.getString(_keyUsername) ?? 'User',
       'email': prefs.getString(_keyEmail) ?? '',
     };
-  }
-
-  /// 登出
-  Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
-    ApiClient().flaskDio.options.headers.remove('Authorization');
   }
 }
