@@ -18,8 +18,9 @@ class TestFactCheckAPI:
     # ====================================================================
     # 1. 測試：取得闢謠清單 (GET /api/v1/fact-checks)
     # ====================================================================
+    @patch('app.utils.cache.CacheService.get', return_value=None)
     @patch('app.utils.db.Database.execute_query')
-    def test_get_fact_checks_success(self, mock_query):
+    def test_get_fact_checks_success(self, mock_query, mock_cache_get):
         """測試成功獲取分頁與關鍵字篩選後的闢謠清單"""
         
         # 模擬 get_list() 內部的兩次資料庫連續查詢：
@@ -55,8 +56,9 @@ class TestFactCheckAPI:
     # ====================================================================
     # 2. 測試：取得單篇闢謠詳情 - 成功 (GET /api/v1/fact-checks/<id>)
     # ====================================================================
+    @patch('app.utils.cache.CacheService.get', return_value=None)
     @patch('app.utils.db.Database.execute_query')
-    def test_get_fact_check_detail_success(self, mock_query):
+    def test_get_fact_check_detail_success(self, mock_query, mock_cache_get):
         """測試帶入正確的整數 ID 能成功返回單篇闢謠的詳細內容"""
         
         # 模擬 get_by_id() 的資料庫回傳值
@@ -82,8 +84,9 @@ class TestFactCheckAPI:
     # ====================================================================
     # 3. 測試：取得單篇闢謠詳情 - 查無此資料 (GET /api/v1/fact-checks/<id>)
     # ====================================================================
+    @patch('app.utils.cache.CacheService.get', return_value=None)
     @patch('app.utils.db.Database.execute_query')
-    def test_get_fact_check_detail_not_found(self, mock_query):
+    def test_get_fact_check_detail_not_found(self, mock_query, mock_cache_get):
         """測試當傳入不存在的 ID 時，系統能優雅地返回 404 錯誤回應"""
         
         # 模擬當資料庫找不到該 ID 時回傳 None 的情境

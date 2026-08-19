@@ -24,8 +24,9 @@ class TestPharmacyAPI:
     # ====================================================================
     # 1. 測試：取得全量藥局清單 - 無篩選條件 (GET /api/v1/pharmacies)
     # ====================================================================
+    @patch('app.utils.cache.CacheService.get', return_value=None)
     @patch('app.utils.db.Database.execute_query')
-    def test_get_pharmacies_all_success(self, mock_query):
+    def test_get_pharmacies_all_success(self, mock_query, mock_cache_get):
         """測試：當不帶任何 query 參數時，能成功回傳完整的中文藥局列表"""
         
         # 模擬資料庫撈回的真實中文藥局紀錄
@@ -46,7 +47,6 @@ class TestPharmacyAPI:
 
         response = self.client.get(self.base_url)
         
-        # 斷言驗證
         assert response.status_code == 200
         res_data = json.loads(response.data)
         
@@ -59,15 +59,10 @@ class TestPharmacyAPI:
     # ====================================================================
     # 2. 測試：帶中文條件篩選藥局 (GET /api/v1/pharmacies?q=祥全&city=臺北市)
     # ====================================================================
-    @patch('app.utils.cache.CacheService.get')  #
+    @patch('app.utils.cache.CacheService.get', return_value=None)
     @patch('app.utils.db.Database.execute_query')
     def test_get_pharmacies_with_filters_success(self, mock_query, mock_cache_get):
         """測試：當帶入中文關鍵字 q 與縣市 city 篩選時，系統能正確調用並回傳過濾結果"""
-        
-        # 1. 強制讓快取未命中 (Cache Miss)，確保系統一定會往下走去查資料庫
-        mock_cache_get.return_value = None
-        
-        # 2. 設定資料庫模擬回傳值
         mock_query.return_value = [
             {
                 "id": 1,
@@ -92,7 +87,6 @@ class TestPharmacyAPI:
         assert res_data["status"] == "success"
         assert res_data["count"] == 1
         
-        # 3. 完美解鎖！因為有 mock_cache_get 攔截，這裡就不會 unpack 失敗了
         called_args, called_kwargs = mock_query.call_args
         assert "%祥全%" in called_kwargs["params"]
         assert "臺北市" in called_kwargs["params"]
@@ -100,21 +94,14 @@ class TestPharmacyAPI:
     # ====================================================================
     # 3. 測試：資料庫異常保護 (Error Handling)
     # ====================================================================
-    @patch('app.utils.cache.CacheService.get')  # Mock 快取服務
+    @patch('app.utils.cache.CacheService.get', return_value=None)
     @patch('app.utils.db.Database.execute_query')
     def test_get_pharmacies_database_error(self, mock_query, mock_cache_get):
         """測試：當資料庫查詢噴出強烈異常時，控制器應能捕捉並回應 500 狀態碼"""
-        
-        # 1. 強制讓快取未命中 (Cache Miss)，逼迫系統一定要往下走去查資料庫
-        # 有了這行 Mock 攔截，就完全不需要手動呼叫 CacheService.delete 了
-        mock_cache_get.return_value = None
-        
-        # 2. 強制讓資料庫拋出 Exception
         mock_query.side_effect = Exception("OperationalError: Connection timed out.")
 
         response = self.client.get(self.base_url)
         
-        # 3. 驗證斷言
         assert response.status_code == 500
         res_data = json.loads(response.data)
         assert "error" in res_data

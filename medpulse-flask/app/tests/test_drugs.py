@@ -18,8 +18,9 @@ class TestDrugAPI:
     # ====================================================================
     # 1. 測試：取得藥品清單 (GET /api/v1/drugs)
     # ====================================================================
+    @patch('app.utils.cache.CacheService.get', return_value=None)
     @patch('app.utils.db.Database.execute_query')
-    def test_get_drugs_success(self, mock_query):
+    def test_get_drugs_success(self, mock_query, mock_cache_get):
         """測試：當資料庫有資料時，正確回傳藥品清單與分頁資訊"""
         
         # 模擬 Database.execute_query 的兩次觸發回傳值
@@ -56,18 +57,16 @@ class TestDrugAPI:
     # ====================================================================
     # 2. 測試：取得特定藥品詳情 - 成功案例 (GET /api/v1/drugs/<id>)
     # ====================================================================
+    @patch('app.utils.cache.CacheService.get', return_value=None)
     @patch('app.utils.db.Database.execute_query')
-    def test_get_drug_detail_success(self, mock_query):
+    def test_get_drug_detail_success(self, mock_query, mock_cache_get):
         """測試：輸入正確的 drug_id 時，應回傳 200 與完整說明書內容"""
-        
-        # 模擬單一藥品的完整欄位 (SELECT * FROM drugs)
-        mock_query.return_return = {
+        mock_query.return_value = {
             "id": "drug-xyz",
             "brand_name": "Aspirin",
             "description": "Pain reliever",
             "dosage_and_administration": "Take 1 tablet daily"
         }
-        mock_query.return_value = mock_query.return_return  # 綁定 mock 回傳值
 
         response = self.client.get(f"{self.base_url}/drug-xyz")
         
@@ -80,8 +79,9 @@ class TestDrugAPI:
     # ====================================================================
     # 3. 測試：取得特定藥品詳情 - 查無此藥 (GET /api/v1/drugs/<id>)
     # ====================================================================
+    @patch('app.utils.cache.CacheService.get', return_value=None)
     @patch('app.utils.db.Database.execute_query')
-    def test_get_drug_detail_not_found(self, mock_query):
+    def test_get_drug_detail_not_found(self, mock_query, mock_cache_get):
         """測試：當輸入不存在的 drug_id 時，應優雅回傳 404 Error"""
         
         # 模擬資料庫查無此資料，回傳 None

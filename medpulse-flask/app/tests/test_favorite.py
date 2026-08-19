@@ -129,3 +129,21 @@ class TestFavoriteAPI:
         assert res_data["status"] == "success"
         assert len(res_data["favorites"]) == 1
         assert res_data["favorites"][0]["brand_name"] == "Advils Fast Relief"
+
+    # ====================================================================
+    # 5. 測試：資料庫異常保護 (Error Handling)
+    # ====================================================================
+    @patch('app.routes.favorite.get_jwt_identity')
+    @patch('app.utils.db.Database.execute_query')
+    def test_add_favorite_database_error(self, mock_query, mock_jwt):
+        """測試：當資料庫發生異常時，系統回傳 500 錯誤"""
+        mock_jwt.return_value = str(self.mock_user_id)
+        mock_query.side_effect = Exception("Database connection failed")
+
+        payload = {"drug_id": self.mock_drug_id}
+        response = self.client.post(self.base_url, json=payload, headers=self.headers)
+
+        assert response.status_code == 500
+        res_data = json.loads(response.data)
+        assert "error" in res_data
+        assert "Failed to add favorite" in res_data["error"]
