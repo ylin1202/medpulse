@@ -84,27 +84,28 @@ class _FavoriteButtonState extends State<FavoriteButton> {
 
     try {
       final loggedIn = await AuthService().isLoggedIn();
+      // 若已 unmount，直接中斷執行，不發送多餘請求
+      if (!mounted) return;
+
       if (!loggedIn) {
-        if (mounted) {
-          setState(() {
-            _isFavorited = false;
-            _isLoading = false;
-          });
-        }
+        setState(() {
+          _isFavorited = false;
+          _isLoading = false;
+        });
         return;
       }
 
       final status = await FavoriteService().isFavorited(widget.drugId);
-      if (mounted) {
-        setState(() {
-          _isFavorited = status;
-        });
-      }
+      // 2：第二次 await 結束後再次驗證掛載狀態
+      if (!mounted) return;
+
+      setState(() {
+        _isFavorited = status;
+      });
     } catch (e) {
       debugPrint('[FavoriteButton] Check Status Failed: $e');
-      if (mounted) {
-        setState(() => _isFavorited = false);
-      }
+      if (!mounted) return;
+      setState(() => _isFavorited = false);
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -112,63 +113,73 @@ class _FavoriteButtonState extends State<FavoriteButton> {
     }
   }
 
-  Future<void> _toggleFavorite() async {
+ Future<void> _toggleFavorite() async {
     if (_isLoading) return;
 
+    // 1. 檢查登入狀態
     final loggedIn = await AuthService().isLoggedIn();
+    if (!mounted) return; 
+
+    // 2. 未登入則彈出 Modal
     if (!loggedIn) {
-      if (!mounted) return;
       showDialog(
         context: context,
         builder: (context) => AuthModal(
           onAuthSuccess: () {
-            _checkInitialStatus().then((_) => _toggleFavorite());
+            if (!mounted) return;
+            _checkInitialStatus().then((_) {
+              if (mounted) {
+                _toggleFavorite();
+              }
+            });
           },
         ),
       );
       return;
     }
 
+    // 3. 設定 Loading 狀態
     setState(() => _isLoading = true);
 
     bool success = false;
     final bool previousState = _isFavorited;
 
+    // 4. 發送 API 請求
     if (previousState) {
       success = await FavoriteService().removeFavorite(widget.drugId);
     } else {
       success = await FavoriteService().addFavorite(widget.drugId);
     }
 
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-        if (success) {
-          _isFavorited = !previousState;
-        }
-      });
+    // 5. 請求完成後的防護與狀態更新
+    if (!mounted) return;
 
+    setState(() {
+      _isLoading = false;
       if (success) {
-        // 💡 廣播通知全站：這個 drugId 的收藏狀態更新了！
-        FavoriteNotifier.notifyChanged(widget.drugId);
-
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_isFavorited ? 'Drug saved to favorites' : 'Drug removed from favorites'),
-            duration: const Duration(seconds: 1),
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to update favorite. Please try again.'),
-            backgroundColor: Colors.red,
-            duration: Duration(seconds: 2),
-          ),
-        );
+        _isFavorited = !previousState;
       }
+    });
+
+    if (success) {
+      FavoriteNotifier.notifyChanged(widget.drugId);
+
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_isFavorited ? 'Drug saved to favorites' : 'Drug removed from favorites'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to update favorite. Please try again.'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
   }
 
