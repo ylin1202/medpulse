@@ -1,60 +1,117 @@
-import os
+# agent/database.py
 import asyncpg
-from dotenv import load_dotenv
+from typing import List, Dict, Any, Optional
 
-load_dotenv()
-
-async def query_medical_metrics_async(metrics_list: list, db_pool: asyncpg.Pool) -> dict:
-    # 防呆機制：若沒傳入 metrics_list 或 db_pool 為 None，直接返回空字典
-    if not metrics_list or not db_pool:
-        print("  └─ [DB Debug] db_pool is None or metrics_list is empty!")
+async def query_medical_metrics_async(
+    metrics_list: List[str], 
+    db_pool: Optional[asyncpg.Pool]
+) -> Dict[str, Any]:
+    """
+    非同步批次檢索醫學檢驗指標 (Relational RAG)
+    消除 N+1 查詢，單次 I/O Round-trip
+    """
+    if not metrics_list or db_pool is None:
         return {}
+
+    cleaned_metrics = [m.strip().lower() for m in metrics_list if m.strip()]
+    if not cleaned_metrics:
+        return {}
+
+    search_terms = set(cleaned_metrics)
+    for m in cleaned_metrics:
+        if m.endswith("s") and len(m) > 1:
+            search_terms.add(m[:-1])
+
+    query = """
+        SELECT 
+            metric_label, 
+            ref_range_lower, 
+            ref_range_upper, 
+            valueuom, 
+            metric_definition 
+        FROM medical_metrics 
+        WHERE LOWER(metric_label) = ANY($1::text[])
+           OR LOWER(REGEXP_REPLACE(metric_label, 's$', '')) = ANY($1::text[]);
+    """
 
     results = {}
     try:
         async with db_pool.acquire() as conn:
-            for metric in metrics_list:
-                clean_metric = metric.strip()
-                if not clean_metric:
-                    continue
-
-                row = None
-
-                # 1. 精確比對（不分大小寫）
-                exact_query = """
-                    SELECT metric_label, ref_range_lower, ref_range_upper, valueuom, metric_definition 
-                    FROM medical_metrics 
-                    WHERE LOWER(metric_label) = LOWER($1);
-                """
-                row = await conn.fetchrow(exact_query, clean_metric)
-
-                # 2. 自動去複數 's' 比對 (如 White Blood Cells -> White Blood Cell)
-                if not row and clean_metric.lower().endswith('s'):
-                    singular_metric = clean_metric[:-1]
-                    row = await conn.fetchrow(exact_query, singular_metric)
-
-                # 3. 關鍵字模糊比對 (ILIKE)
-                if not row:
-                    fuzzy_query = """
-                        SELECT metric_label, ref_range_lower, ref_range_upper, valueuom, metric_definition 
-                        FROM medical_metrics 
-                        WHERE metric_label ILIKE $1 
-                        LIMIT 1;
-                    """
-                    row = await conn.fetchrow(fuzzy_query, f"%{clean_metric}%")
-
-                # 4. 若查到資料，封裝結果
-                if row:
-                    results[row['metric_label']] = {
-                        "lower": float(row['ref_range_lower']) if row['ref_range_lower'] is not None else None,
-                        "upper": float(row['ref_range_upper']) if row['ref_range_upper'] is not None else None,
-                        "unit": row['valueuom'],
-                        "definition": row['metric_definition']
-                    }
-                else:
-                    print(f"  └─ [DB Miss] '{clean_metric}' not matched in medical_metrics table.")
-
+            rows = await conn.fetch(query, list(search_terms))
+            for row in rows:
+                label = row["metric_label"]
+                results[label] = {
+                    "lower": float(row["ref_range_lower"]) if row["ref_range_lower"] is not None else None,
+                    "upper": float(row["ref_range_upper"]) if row["ref_range_upper"] is not None else None,
+                    "unit": row["valueuom"],
+                    "definition": row["metric_definition"]
+                }
     except Exception as e:
         print(f"[PostgreSQL Async RAG Error]: {e}")
+        return {}
+
+    return results
+
+
+async def hybrid_search_fallback_async(
+    query_text: str,
+    query_embedding: List[float],
+    db_pool: Optional[asyncpg.Pool],
+    top_k: int = 3,
+    rrf_k: int = 60
+) -> List[Dict[str, Any]]:
+    """
+    Hybrid Search (Dense Vector + Sparse Full-Text Search) 使用 Reciprocal Rank Fusion (RRF)
+    當精準比對無結果時啟動的 Fallback 檢索
+    """
+    if not query_text or db_pool is None:
+        return []
+
+    # 執行 RRF 融合查詢
+    hybrid_sql = """
+    WITH dense_search AS (
+        SELECT id, metric_label, ref_range_lower, ref_range_upper, valueuom, metric_definition,
+               ROW_NUMBER() OVER (ORDER BY embedding <=> $1::vector) as dense_rank
+        FROM medical_metrics
+        WHERE embedding IS NOT NULL
+        LIMIT 20
+    ),
+    sparse_search AS (
+        SELECT id, metric_label, ref_range_lower, ref_range_upper, valueuom, metric_definition,
+               ROW_NUMBER() OVER (ORDER BY ts_rank_cd(search_vector, plainto_tsquery('english', $2)) DESC) as sparse_rank
+        FROM medical_metrics
+        WHERE search_vector @@ plainto_tsquery('english', $2)
+        LIMIT 20
+    )
+    SELECT 
+        COALESCE(d.id, s.id) as id,
+        COALESCE(d.metric_label, s.metric_label) as metric_label,
+        COALESCE(d.ref_range_lower, s.ref_range_lower) as ref_range_lower,
+        COALESCE(d.ref_range_upper, s.ref_range_upper) as ref_range_upper,
+        COALESCE(d.valueuom, s.valueuom) as valueuom,
+        COALESCE(d.metric_definition, s.metric_definition) as metric_definition,
+        COALESCE(1.0 / ($3 + d.dense_rank), 0.0) +
+        COALESCE(1.0 / ($3 + s.sparse_rank), 0.0) as rrf_score
+    FROM dense_search d
+    FULL OUTER JOIN sparse_search s ON d.id = s.id
+    ORDER BY rrf_score DESC
+    LIMIT $4;
+    """
+
+    results = []
+    try:
+        async with db_pool.acquire() as conn:
+            rows = await conn.fetch(hybrid_sql, str(query_embedding), query_text, rrf_k, top_k)
+            for row in rows:
+                results.append({
+                    "metric_label": row["metric_label"],
+                    "lower": float(row["ref_range_lower"]) if row["ref_range_lower"] is not None else None,
+                    "upper": float(row["ref_range_upper"]) if row["ref_range_upper"] is not None else None,
+                    "unit": row["valueuom"],
+                    "definition": row["metric_definition"],
+                    "rrf_score": float(row["rrf_score"])
+                })
+    except Exception as e:
+        print(f"[Hybrid Search Error]: {e}")
 
     return results
