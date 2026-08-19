@@ -93,4 +93,4 @@ class FactCheckController:
 
 # 綁定路由點
 fact_check_bp.route("", methods=["GET"])(FactCheckController.get_fact_checks)
-fact_check_bp.route("//<int:item_id>", methods=["GET"])(FactCheckController.get_fact_check_detail)
+fact_check_bp.route("/<int:item_id>", methods=["GET"])(FactCheckController.get_fact_check_detail)
