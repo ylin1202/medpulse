@@ -1,29 +1,23 @@
-import os
-import random
-import redis
+from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
 from flask_mail import Message
 from app.extensions import mail
 from app.models.user import UserModel
 from app.utils.limiter import limiter
+from app.utils.cache import CacheService
+import random
 
 # 建立 JWT Auth 的 Blueprint 模組
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/v1/auth")
 
-# 從環境變數或專案設定讀取 Redis，防止 Hardcoded
-redis_client = redis.StrictRedis(
-    host=os.getenv("REDIS_HOST", "localhost"),
-    port=int(os.getenv("REDIS_PORT", 6379)),
-    db=int(os.getenv("DB_REDIS", 0)),
-    decode_responses=True
-)
+# 共用 CacheService 封裝的 Redis Client 實例與連線池
+redis_client = CacheService.get_client()
 
 
 class AuthController:
     """封裝 Auth 相關 API 邏輯的 Class"""
 
-    # 先寫 limiter 限制，再寫 staticmethod
     # 發送驗證碼，限制每個 IP 每分鐘只能打 3 次，防止簡訊/郵件被刷爆
     @limiter.limit("3 per minute")
     @staticmethod
@@ -56,6 +50,7 @@ class AuthController:
         except Exception as e:
             return jsonify({"error": f"Failed to send email: {str(e)}"}), 500
 
+    # 註冊 API，限制每個 IP 每分鐘最多試 5 次
     @limiter.limit("5 per minute")
     @staticmethod
     def register():
@@ -141,7 +136,6 @@ class AuthController:
             jti = jwt_data["jti"]  # 取得獨一無二的 Token ID
             
             # 計算 Token 的剩餘存活秒數 (過期時間戳 - 當前時間戳)
-            from datetime import datetime, timezone
             now = datetime.now(timezone.utc).timestamp()
             remains = max(int(jwt_data["exp"] - now), 1)
 
