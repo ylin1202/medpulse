@@ -1,14 +1,17 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
-from flask_limiter.errors import RateLimitExceeded  # 引入限流異常類別
-from app.extensions import mail
+from flask_limiter.errors import RateLimitExceeded
+
 from config import Config
+from app.extensions import mail
 from app.utils.db import Database
 from app.utils.limiter import limiter
+from app.utils.cache import CacheService
 from app.models.user import UserModel
 from app.models.favorite import FavoriteModel
-from app.routes.auth import redis_client
+
+# 引入路由藍圖
 from app.routes.auth import auth_bp
 from app.routes.fact_check import fact_check_bp
 from app.routes.drug import drug_bp
@@ -58,25 +61,25 @@ def create_app():
             "version": "1.0.0"
         }), 200
 
-    # 啟動時建立 User 表 (若尚未存在)
+    # 啟動時自動檢查並建立關聯資料表
     with app.app_context():
         try:
             UserModel.create_table()
             FavoriteModel.create_table()
-            print("Database connection pool initialized & User table checked.")
+            print("Database connection pool initialized & User/Favorite tables checked.")
         except Exception as e:
             print(f"Database initialization skipped or failed: {e}")
     
+    # 自訂 429 流量超限錯誤回應
     @app.errorhandler(RateLimitExceeded)
     def ratelimit_handler(e):
-        """當使用者流量打滿時，自訂的 429 錯誤回傳 JSON"""
         return jsonify({
             "status": "fail",
             "error": "Too Many Requests",
             "message": f"You have exceeded your request limit. Please try again later. Details: {e.description}"
         }), 429
 
-    # 註冊黑名單檢查回呼函式
+    # 註冊 JWT 黑名單（Blocklist）檢查回呼函式
     @jwt.token_in_blocklist_loader
     def check_if_token_is_revoked(jwt_header, jwt_payload: dict):
         """
@@ -84,17 +87,20 @@ def create_app():
         Flask-JWT-Extended 會自動呼叫此處，檢查這把鑰匙是否已被黑名單廢棄。
         """
         try:
-            jti = jwt_payload["jti"]  # 每個 Token 的唯一識別 ID
+            # 取得該 JWT 的唯一識別碼 (JWT ID)
+            jti = jwt_payload["jti"]
             
-            # 去 Redis 撈看看有沒有這個被註銷的 Token ID
+            # 取得共用的 Redis 連線實例
+            redis_client = CacheService.get_client()
+            
+            # 查詢 Redis 中是否存在此 jti 的黑名單紀錄
             token_in_redis = redis_client.get(f"blacklist:{jti}")
             
-            # 如果 token_in_redis 有值，代表使用者已經按了「登出」
-            # 回傳 True 阻擋連線，Flask 會自動回應 401 {"msg": "Token has been revoked"}
+            # 若存在代表使用者已主動登出，回傳 True 阻斷連線
             return token_in_redis is not None
             
         except Exception:
-            # 萬一 Redis 臨時掛了，保險起見讓它通過（想嚴格封鎖也可以回傳 True）
+            # 防禦性降級：若 Redis 連線異常，預設回傳 False 放行以避免影響正常業務（亦可依資安策略改為 True 嚴格攔截）
             return False
 
     return app
