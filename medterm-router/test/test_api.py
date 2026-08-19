@@ -2,6 +2,8 @@ import time
 import uuid
 import requests
 
+# FastAPI 預設啟動的本地網址與 Port
+BASE_URL = "http://127.0.0.1:8000"
 
 def print_banner(title):
     print("\n" + "=" * 60)

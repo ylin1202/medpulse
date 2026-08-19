@@ -1,4 +1,3 @@
-# agent/database.py
 import asyncpg
 from typing import List, Dict, Any, Optional
 
@@ -6,10 +5,7 @@ async def query_medical_metrics_async(
     metrics_list: List[str], 
     db_pool: Optional[asyncpg.Pool]
 ) -> Dict[str, Any]:
-    """
-    非同步批次檢索醫學檢驗指標 (Relational RAG)
-    消除 N+1 查詢，單次 I/O Round-trip
-    """
+    """非同步批次檢索醫學檢驗指標 (消除 N+1 查詢)"""
     if not metrics_list or db_pool is None:
         return {}
 
@@ -60,14 +56,10 @@ async def hybrid_search_fallback_async(
     top_k: int = 3,
     rrf_k: int = 60
 ) -> List[Dict[str, Any]]:
-    """
-    Hybrid Search (Dense Vector + Sparse Full-Text Search) 使用 Reciprocal Rank Fusion (RRF)
-    當精準比對無結果時啟動的 Fallback 檢索
-    """
+    """Hybrid Search (Dense + Sparse) + RRF 融合查詢"""
     if not query_text or db_pool is None:
         return []
 
-    # 執行 RRF 融合查詢
     hybrid_sql = """
     WITH dense_search AS (
         SELECT id, metric_label, ref_range_lower, ref_range_upper, valueuom, metric_definition,
