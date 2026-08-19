@@ -14,6 +14,11 @@ class CacheService:
     """通用 Redis 查詢快取服務"""
 
     @staticmethod
+    def get_client() -> redis.StrictRedis:
+        """提供原生 Redis Client 實例供特定操作（如驗證碼、黑名單）使用"""
+        return redis_cache
+
+    @staticmethod
     def get(key):
         """讀取快取，自動將 JSON 字串轉回 Python 字典/列表"""
         try:
@@ -36,7 +41,7 @@ class CacheService:
 
     @staticmethod
     def delete_pattern(pattern):
-        """根據 Pattern 批量刪除快取 (未來後台如果有更新藥品資料時可以用)"""
+        """根據 Pattern 批量刪除快取"""
         try:
             keys = redis_cache.keys(pattern)
             if keys:
