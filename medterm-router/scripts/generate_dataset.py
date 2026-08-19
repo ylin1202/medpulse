@@ -1,95 +1,161 @@
-import pandas as pd
+import os
 import json
 import random
+import pandas as pd
 
-def generate_fine_tune_data():
-    print("1. 讀取 20 個核心指標當作基礎標籤...")
-    try:
-        # 讀取階段一洗出來的 20 個熱門醫療指標基礎檔案
-        df = pd.read_csv('data/cleaned_metrics_base.csv')
-        # 【資料清洗】使用 .strip() 強制修剪掉指標名稱字串前後可能隱藏的空格，防範未來字串比對失敗
-        metrics_list = [str(m).strip() for m in df['label'].tolist()]
-    except Exception as e:
-        print("錯誤：找不到 data/cleaned_metrics_base.csv，請先確保階段一腳本已執行！")
-        return
+# ====================================================================
+# 1. 建立 20 項核心指標的臨床縮寫、別名與同義詞映射庫 (Canonical Mapping)
+# ====================================================================
+METRIC_SYNONYMS = {
+    "RDW": ["RDW", "red cell distribution width", "RDW-CV", "erythrocyte distribution width"],
+    "Red Blood Cells": ["Red Blood Cells", "RBC", "RBC count", "erythrocytes", "erythrocyte count"],
+    "White Blood Cells": ["White Blood Cells", "WBC", "leukocytes", "WBC count", "white count"],
+    "MCHC": ["MCHC", "mean corpuscular hemoglobin concentration"],
+    "Hematocrit": ["Hematocrit", "HCT", "crit", "packed cell volume", "PCV"],
+    "Hemoglobin": ["Hemoglobin", "Hgb", "Hb", "haemoglobin"],
+    "Platelet Count": ["Platelet Count", "platelets", "PLT", "thrombocyte count"],
+    "MCV": ["MCV", "mean corpuscular volume"],
+    "MCH": ["MCH", "mean corpuscular hemoglobin"],
+    "Chloride": ["Chloride", "Cl-", "serum chloride", "Cl"],
+    "Bicarbonate": ["Bicarbonate", "HCO3-", "serum bicarbonate", "total CO2", "bicarb"],
+    "Magnesium": ["Magnesium", "Mg", "serum magnesium", "Mg2+"],
+    "Urea Nitrogen": ["Urea Nitrogen", "BUN", "blood urea nitrogen", "serum urea"],
+    "Calcium, Total": ["Calcium, Total", "serum calcium", "total calcium", "Ca2+", "calcium level"],
+    "Sodium": ["Sodium", "Na+", "serum sodium", "Na"],
+    "Potassium": ["Potassium", "K+", "serum potassium", "potassium level", "K"],
+    "Anion Gap": ["Anion Gap", "serum anion gap", "AG"],
+    "Creatinine": ["Creatinine", "Cr", "serum creatinine", "SCr", "creat"],
+    "Glucose": ["Glucose", "blood glucose", "blood sugar", "fasting blood sugar", "GLU", "fasting glucose"],
+    "Phosphate": ["Phosphate", "PO4", "serum phosphate", "phosphorus", "serum phosphorus"]
+}
 
-    # 【多樣化語境設計】建立 2 個醫學指標的模擬病歷句型庫，涵蓋急診、查房、主訴等情境
-    templates_2_metrics = [
-        "Patient was admitted to the ER presenting with extreme fatigue and pale skin. Emergency physician requested immediate screening for {metrics}.",
-        "The laboratory report came back showing fluctuating levels of {m1}. However, {m2} appears perfectly stable within normal ranges.",
-        "During the morning rounds, the attending doctor noted that the patient's chronic condition is slightly deteriorating. Recommend checking {metrics}.",
-        "Routine health check-up panel completed. The primary care provider highlighted borderline abnormal findings in {m1}. {m2} is tracked as control.",
-        "The patient's family requested a simplified explanation of the morning lab results, specifically asking about the values of {metrics}.",
-        "Pre-operative evaluation requires a comprehensive clearance. Ensure that {metrics} are documented in the pre-op chart.",
-        "The telemedicine consultation note indicates the need to re-verify past lab charts. Prioritize tracking historical trends for {metrics}.",
-        "Discharge summary draft: Patient is stable to leave. Outpatient clinic follow-up scheduled in 2 weeks to re-test {metrics}."
-    ]
+# ====================================================================
+# 2. 多元臨床語境模板 (涵蓋 12 種臨床真實場景)
+# ====================================================================
+CLINICAL_TEMPLATES = [
+    # 1. 急診 (Emergency Department)
+    "Patient presented to the ER with acute onset of diaphoresis and tachycardia. Urgent lab workup requested for {mentions}.",
+    "Emergency triage note: 58-year-old male with chest tightness and altered mental status. Stat panel ordered for {mentions}.",
+    
+    # 2. 查房與病情變化 (Inpatient Rounds)
+    "During morning rounds, the attending physician observed clinical deterioration. Recommended immediate re-evaluation of {mentions}.",
+    "Inpatient progress note: Patient is currently recovering from sepsis. Continue tracking serial values for {mentions}.",
+    
+    # 3. 門診與常規隨訪 (Outpatient & Follow-up)
+    "Routine outpatient check-up for a patient with poorly managed metabolic syndrome. Ordered routine screening for {mentions}.",
+    "Discharge summary draft: Patient is clinically stable. Scheduled follow-up visit in 3 weeks to repeat lab testing for {mentions}.",
+    
+    # 4. 手術前後評估 (Pre/Post-Operative Evaluation)
+    "Pre-operative clearance note: Ensure baseline metabolic status is established. Documented {mentions} in surgical safety chart.",
+    "Post-op Day 2 status: Fluid balance is negative. Order morning blood draws including {mentions} to prevent electrolyte shifts.",
+    
+    # 5. 重症加護 (ICU Critical Care)
+    "ICU telemetry transfer note: Multi-organ failure protocol initiated. Monitor hourly hemodynamics and draw {mentions} every 8 hours.",
+    
+    # 6. 簡報或家屬會談 (Clinical Communication & Telehealth)
+    "Telehealth consultation summary: Reviewed external laboratory results with patient, focusing specifically on abnormal trends in {mentions}.",
+    "Consultation note: Discussed lab findings with family. Clarified clinical implications regarding fluctuating {mentions}."
+]
 
-    # 【高難度語境設計】建立 3 個醫學指標的重症或加護病房（ICU）句型庫
-    templates_3_metrics = [
-        "Clinical note from ICU: please monitor the patient's vital signs and run automated panels for {metrics} every 12 hours.",
-        "Post-op recovery progress is acceptable. Follow-up blood work is ordered for tomorrow morning to evaluate {metrics}.",
-        "Physician initial assessment: symptoms indicate potential metabolic stress. Request full panel including {metrics} immediately."
-    ]
+# ====================================================================
+# 3. 負樣本情境庫 (Negative Samples: 無任何抽血或檢驗指標需求)
+# ====================================================================
+NEGATIVE_SAMPLES = [
+    "Patient presented with mild tension headache after prolonged screen time. Advised rest, hydration, and OTC acetaminophen as needed.",
+    "Follow-up visit for seasonal allergic rhinitis. Prescribed fluticasone nasal spray and recommended allergen avoidance.",
+    "Physical therapy progress note: Patient completed 60 minutes of lumbar stabilization exercises without acute pain.",
+    "Orthopedic consultation: 24-year-old with right ankle inversion sprain during basketball. X-ray negative for acute fracture; RICE protocol initiated.",
+    "Psychiatry note: Patient reports stable mood and improved sleep architecture on current sertraline dosage. No medication adjustments indicated.",
+    "Dermatology clinic: Routine skin examination revealed a benign seborrheic keratosis on the right shoulder. No biopsy required.",
+    "Administrative note: Patient attended clinic strictly to renew medical driving certificate. Visual acuity and reflex testing within normal limits.",
+    "Patient calls regarding mild dry cough persisting for 3 days without fever, shortness of breath, or chest pain. Symptomatic care advised."
+]
 
+def format_natural_mentions(alias_list: list) -> str:
+    """動態生成符合自然英語文法的片語 (牛津逗號支援)"""
+    if len(alias_list) == 1:
+        return alias_list[0]
+    elif len(alias_list) == 2:
+        return f"{alias_list[0]} and {alias_list[1]}"
+    else:
+        return f"{', '.join(alias_list[:-1])}, and {alias_list[-1]}"
+
+def generate_fine_tune_data(total_samples: int = 1200, negative_ratio: float = 0.15):
+    print(f"1. 正在初始化醫療 NER 資料生成管線 (目標總數: {total_samples} 筆)...")
+    
+    canonical_metrics = list(METRIC_SYNONYMS.keys())
     dataset = []
-    print("2. 開始交叉合成 120 筆高泛化性的訓練資料...")
+    
+    num_negatives = int(total_samples * negative_ratio)
+    num_positives = total_samples - num_negatives
 
-    # 執行循環，動態組裝 120 筆「輸入(病歷) -> 輸出(JSON)」的配對範例
-    for i in range(120):
-        # 隨機決定這一筆範例要塞 2 個還是 3 個指標，模擬真實病歷的隨機性
-        num_metrics = random.choice([2, 3])
-        # 從 20 個核心清單中，隨機抽出不重複的指標
-        chosen_metrics = random.sample(metrics_list, num_metrics)
+    print(f"2. 開始合成正樣本 ({num_positives} 筆，整合縮寫/同義詞與打亂排序)...")
+    for _ in range(num_positives):
+        # 隨機選取 1 ~ 4 個檢驗指標
+        num_metrics = random.choices([1, 2, 3, 4], weights=[0.2, 0.45, 0.25, 0.10])[0]
+        chosen_canonical = random.sample(canonical_metrics, num_metrics)
         
-        # 【自然語言拼裝】動態組裝符合英文文法的 "A and B" 或 "A, B, and C" 語句
-        if num_metrics == 2:
-            metrics_string = f"{chosen_metrics[0]} and {chosen_metrics[1]}"
-            template = random.choice(templates_2_metrics)
-            # 將組裝好的指標字串或單一指標，填入對應的模板變數中
-            input_text = template.format(metrics=metrics_string, m1=chosen_metrics[0], m2=chosen_metrics[1])
-        else:
-            # 包含牛津逗號（Oxford Comma）的標準英文三項串接文法
-            metrics_string = f"{chosen_metrics[0]}, {chosen_metrics[1]}, and {chosen_metrics[2]}"
-            template = random.choice(templates_3_metrics)
-            input_text = template.format(metrics=metrics_string)
-
-        # ====================================================================
-        # 【核心算法優化：破除死記硬背】
-        # 故意用 random.shuffle() 打亂 output JSON 陣列裡的指標順序。
-        # 如果 input 出現順序和 output 永遠相同，AI 會偷懶唯讀「相對位置」；打亂順序能強迫模型真正理解語意！
-        # ====================================================================
-        extracted_metrics = list(chosen_metrics)
-        random.shuffle(extracted_metrics) 
+        # 從選中的指標中，各自隨機挑選一個同義詞/縮寫填入句子
+        chosen_aliases = [random.choice(METRIC_SYNONYMS[m]) for m in chosen_canonical]
+        mentions_text = format_natural_mentions(chosen_aliases)
         
-        # 構建小模型的思考鏈 (Chain of Thought)，植入「禁止越界給醫療診斷」的安全潛意識
+        # 挑選句子模板
+        template = random.choice(CLINICAL_TEMPLATES)
+        input_text = template.format(mentions=mentions_text)
+        
+        # 打亂 output 中的順序，強迫模型學習語意而非位置記憶
+        target_queries = list(chosen_canonical)
+        random.shuffle(target_queries)
+        
         thought_process = (
-            f"The clinical input mentions {', '.join(extracted_metrics)}. "
-            f"To comply with safety guardrails and prevent illegal medical diagnosis, "
-            f"I must extract these exact terms as raw database query keys without adding any medical opinions."
+            f"The clinical input mentions {', '.join(chosen_aliases)}. "
+            f"Mapped to standardized canonical medical keys: {', '.join(target_queries)}. "
+            f"To adhere to safety protocols, I must extract these exact keys without providing diagnostic opinions."
         )
         
-        # 封裝成微調需要的目標輸出格式
         output_json = {
             "thought": thought_process,
-            "query": extracted_metrics
+            "query": target_queries
         }
         
-        # 【格式特訓設計】使用 indent=2 讓 output 變成帶有漂亮換行和縮排的標準 JSON 字串。
-        # 這樣微調時可以硬生生把「只吐乾淨 JSON」的格式紀律印入模型的潛意識，防止未來半空噴出亂碼。
-        data_entry = {
+        dataset.append({
             "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
             "input": input_text,
             "output": json.dumps(output_json, ensure_ascii=False, indent=2)
-        }
-        dataset.append(data_entry)
+        })
 
-    print(f"3. 正在將 {len(dataset)} 筆商用級訓練集寫入 data/train.json...")
-    # 將組裝完成的 120 筆高畫質教科書範例存入 data 資料夾
-    with open('data/train.json', 'w', encoding='utf-8') as f:
-        json.dump(dataset, f, ensure_ascii=False, indent=2)
+    print(f"3. 開始合成負樣本 ({num_negatives} 筆，強化空查詢防護)...")
+    for _ in range(num_negatives):
+        base_text = random.choice(NEGATIVE_SAMPLES)
         
-    print("【階段二第一步】本地訓練集原料製作成功！")
+        thought_process = (
+            "The clinical text describes general symptoms or non-laboratory findings. "
+            "No specific medical lab tests or metrics are requested. Returning empty query array."
+        )
+        
+        output_json = {
+            "thought": thought_process,
+            "query": []
+        }
+        
+        dataset.append({
+            "instruction": "Extract valid medical metrics from the clinical text. Output JSON only.",
+            "input": base_text,
+            "output": json.dumps(output_json, ensure_ascii=False, indent=2)
+        })
+
+    # 全域隨機打散資料順序
+    random.shuffle(dataset)
+
+    output_dir = "data"
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, "train.json")
+
+    print(f"4. 正在寫入 {len(dataset)} 筆高品質資料至 {output_path} ...")
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(dataset, f, ensure_ascii=False, indent=2)
+
+    print(" 微調資料集升級完成！")
 
 if __name__ == "__main__":
-    generate_fine_tune_data()
+    generate_fine_tune_data(total_samples=1200, negative_ratio=0.15)
