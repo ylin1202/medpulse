@@ -42,4 +42,8 @@ class UserModel:
         """驗證密碼是否正確"""
         return check_password_hash(stored_password_hash, provided_password)
     
+    @staticmethod
+    def verify_user_email(user_id):
+        query = "UPDATE users SET is_verified = TRUE WHERE id = %s RETURNING id, is_verified;"
+        return Database.execute_query(query, (user_id,), fetchone=True, commit=True)
     
