@@ -288,6 +288,7 @@ async def clinical_synthesis_node(state: AgentState) -> Dict[str, Any]:
     1. Explain the clinical correlation between the patient's symptoms (e.g. fever, acute presentation) and these specific lab metrics.
     2. Briefly mention key risks or what abnormal findings would indicate in this context.
     3. Keep the tone concise, objective, and professional (around 80-120 words).
+    4. Strictly provide educational and physiological context only. Do NOT provide a personal diagnosis, clinical prescription, or definitive medical conclusion.
     """)
 
     # 2. Generation (call Gemini API with fallback cascade on quota limits)
