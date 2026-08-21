@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:dio/dio.dart';
 import '../../../../core/network/api_client.dart';
 import '../data/analysis_model.dart';
 
@@ -37,8 +39,12 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
       debugPrint('[AI Agent] Sending clinical text to FastAPI /api/v1/analyze');
 
       final response = await ApiClient().fastApiDio.post(
-        '/analyze',
+        '/api/v1/analyze',
         data: {'clinical_text': text.trim()},
+        options: Options(
+          receiveTimeout: const Duration(seconds: 90), // 明確配置 90 秒逾時
+          sendTimeout: const Duration(seconds: 30),
+        ),
       );
 
       debugPrint('[AI Agent] Response Status: ${response.statusCode}');
@@ -49,12 +55,26 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
           _isLoading = false;
         });
       }
+    } on DioException catch (dioErr) {
+      debugPrint('[AI Agent DioError]: ${dioErr.type} - ${dioErr.message}');
+      if (mounted) {
+        String message = 'Failed to analyze clinical text.';
+        if (dioErr.type == DioExceptionType.receiveTimeout) {
+          message = 'The AI Agent analysis timed out. Multi-stage clinical reasoning took longer than expected. Please try again.';
+        } else if (dioErr.type == DioExceptionType.connectionError ||
+                   dioErr.type == DioExceptionType.connectionTimeout) {
+          message = 'Unable to connect to AI Agent service at localhost:8000. Please ensure the backend container is running.';
+        }
+        setState(() {
+          _errorMessage = message;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       debugPrint('[AI Agent Error]: $e');
       if (mounted) {
         setState(() {
-          _errorMessage =
-              'Failed to analyze clinical text. Please verify FastAPI agent service is online.';
+          _errorMessage = 'An unexpected error occurred during medical analysis: $e';
           _isLoading = false;
         });
       }
@@ -69,6 +89,9 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final hasSynthesis = _analysisResult?.clinicalSynthesis != null &&
+        _analysisResult!.clinicalSynthesis!.trim().isNotEmpty;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
@@ -85,7 +108,7 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. 頂部英雄卡片 (Hero Header Banner - 承襲 Drug Detail 風格)
+            // 1. 頂部英雄卡片 (Hero Header Banner)
             Container(
               padding: const EdgeInsets.all(16.0),
               decoration: BoxDecoration(
@@ -146,7 +169,7 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: const Text(
-                                'Search Engine',
+                                'Explore Lab Metrics',
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
@@ -168,7 +191,7 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
                     style: const TextStyle(fontSize: 13.5),
                     decoration: InputDecoration(
                       hintText:
-                          'Enter text description to search for related lab metrics...',
+                          'Enter clinical note (e.g., patient condition, requested lab tests)...',
                       hintStyle: TextStyle(
                         color: Colors.grey[400],
                         fontSize: 13,
@@ -213,7 +236,8 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
                                 vertical: 5,
                               ),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF00796B).withOpacity(0.06),
+                                color:
+                                    const Color(0xFF00796B).withOpacity(0.06),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Row(
@@ -256,7 +280,7 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
                               ),
                       icon: const Icon(Icons.auto_awesome, size: 18),
                       label: const Text(
-                        'Search Lab Metrics',
+                        'Execute Medical RAG Analysis',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                       style: ElevatedButton.styleFrom(
@@ -293,7 +317,7 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
                       ),
                       SizedBox(height: 16),
                       Text(
-                        'Agent Reasoning with Gemma-3...',
+                        'Synthesizing with LangGraph & Gemini...',
                         style: TextStyle(
                           color: Color(0xFF004D40),
                           fontWeight: FontWeight.bold,
@@ -302,7 +326,7 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
                       ),
                       SizedBox(height: 4),
                       Text(
-                        'Executing LangGraph multi-turn analysis',
+                        'NER Extraction -> Vector Retrieval -> Clinical Synthesis',
                         style: TextStyle(color: Colors.grey, fontSize: 12),
                       ),
                     ],
@@ -333,8 +357,74 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
                 ),
               ),
 
-            // 4. 分析結果展示面板 (採用與 Drug Detail Section Card 相同的微色彩 Header 結構)
+            // 4. 分析結果展示面板
             if (_analysisResult != null && !_isLoading) ...[
+              // =======================================================
+              // 【RAG G 階段】AI Clinical Synthesis (MarkdownBody 渲染)
+              // =======================================================
+              if (hasSynthesis) ...[
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.teal.shade200, width: 1.2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.teal.withOpacity(0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: const [
+                          Icon(
+                            Icons.auto_awesome,
+                            color: Color(0xFF00796B),
+                            size: 18,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'AI Clinical Interpretation & Synthesis',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: Color(0xFF004D40),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      MarkdownBody(
+                        data: _analysisResult!.clinicalSynthesis!.trim(),
+                        styleSheet: MarkdownStyleSheet(
+                          p: const TextStyle(
+                            fontSize: 13.5,
+                            height: 1.55,
+                            color: Color(0xFF1B4D3E),
+                            letterSpacing: 0.15,
+                          ),
+                          strong: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF004D40),
+                          ),
+                          listBullet: const TextStyle(
+                            color: Color(0xFF00796B),
+                            fontSize: 13.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
               // 標題列 + Redis / Retry 狀態 Badge
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -357,20 +447,7 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
                         color: Colors.amber.shade100,
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Row(
-                        children: const [
-                          Icon(Icons.bolt, size: 12, color: Colors.brown),
-                          SizedBox(width: 2),
-                          Text(
-                            'Redis HIT',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.brown,
-                            ),
-                          ),
-                        ],
-                      ),
+                     
                     )
                   else
                     Container(
@@ -381,14 +458,6 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
                       decoration: BoxDecoration(
                         color: Colors.teal.shade50,
                         borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        'Attempts: ${_analysisResult!.totalAttemptsUsed}',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF00796B),
-                        ),
                       ),
                     ),
                 ],
@@ -423,7 +492,6 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
                     final metricData =
                         _analysisResult!.metricsReference[metricName]!;
 
-                    // 完全對齊 Drug Detail 的 _buildSectionCard 結構！
                     return Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
@@ -441,7 +509,7 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // 標題列 (與 Drug Detail 一模一樣的微彩標題區塊)
+                          // 標題列
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 14,

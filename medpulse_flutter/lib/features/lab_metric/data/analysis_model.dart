@@ -26,6 +26,7 @@ class MetricReferenceModel {
 class AnalysisResponseModel {
   final String status;
   final int detectedMetricsCount;
+  final String? clinicalSynthesis; // 新增：Gemini RAG Generation
   final Map<String, MetricReferenceModel> metricsReference;
   final int totalAttemptsUsed;
   final bool cached;
@@ -33,6 +34,7 @@ class AnalysisResponseModel {
   AnalysisResponseModel({
     required this.status,
     required this.detectedMetricsCount,
+    this.clinicalSynthesis,
     required this.metricsReference,
     required this.totalAttemptsUsed,
     required this.cached,
@@ -49,6 +51,7 @@ class AnalysisResponseModel {
     return AnalysisResponseModel(
       status: json['status'] ?? 'unknown',
       detectedMetricsCount: json['detected_metrics_count'] ?? 0,
+      clinicalSynthesis: json['clinical_synthesis']?.toString(), // 讀取後端生成的摘要
       metricsReference: parsedMetrics,
       totalAttemptsUsed: json['total_attempts_used'] ?? 1,
       cached: json['cached'] ?? false,
