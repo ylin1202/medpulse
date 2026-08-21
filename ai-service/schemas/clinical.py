@@ -1,13 +1,13 @@
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 from pydantic import BaseModel, Field
 
 
-# 1. 請求體模型 (FastAPI 必須 import 的類別)
+# Request payload schema for clinical text analysis
 class ClinicalTextRequest(BaseModel):
     clinical_text: str = Field(..., description="The raw clinical text or medical note to analyze")
 
 
-# 2. 單一檢驗指標參考值與定義模型
+# Schema for reference ranges, units, and clinical definitions of a single lab metric
 class MetricReference(BaseModel):
     lower: Optional[float] = None
     upper: Optional[float] = None
@@ -17,7 +17,7 @@ class MetricReference(BaseModel):
     rrf_score: Optional[float] = None
 
 
-# 3. 分析回應模型 (包含 RAG 生成的 clinical_synthesis)
+# Analysis response payload schema (including Dual-RAG generated clinical synthesis)
 class AnalysisResponse(BaseModel):
     status: str
     detected_metrics_count: int

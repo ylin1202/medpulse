@@ -1,18 +1,21 @@
+from typing import List
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 
-# 1. 載入模型
+# 1. Load Sentence Transformer model
 MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 print(f"Loading embedding model: {MODEL_NAME}...")
 model = SentenceTransformer(MODEL_NAME)
 
-# 2. 讀取原始 TSV
+# 2. Ingest raw PUBHEALTH TSV dataset
 TSV_FILE_PATH = "data/train.tsv"
 print(f"Reading TSV dataset from {TSV_FILE_PATH}...")
 df = pd.read_csv(TSV_FILE_PATH, sep="\t")
 
-# 3. 切塊邏輯 (滑動視窗)
-def split_into_chunks(text: str, chunk_size: int = 250, overlap: int = 50) -> list[str]:
+
+# 3. Document chunking logic (Sliding Window)
+def split_into_chunks(text: str, chunk_size: int = 250, overlap: int = 50) -> List[str]:
+    """Split text into overlapping token/character chunks using a sliding window strategy."""
     if not text or not text.strip():
         return []
     chunks = []
@@ -25,7 +28,8 @@ def split_into_chunks(text: str, chunk_size: int = 250, overlap: int = 50) -> li
         start += (chunk_size - overlap)
     return chunks
 
-# 4. 展開切塊並組裝資料
+
+# 4. Flatten document chunks and construct contextual payloads
 print("Splitting documents into chunks...")
 chunk_records = []
 
@@ -36,16 +40,16 @@ for _, row in df.iterrows():
     claim_url = str(row.get("claim_url", "")).strip()
     main_text = str(row.get("main_text", "")).strip()
 
-    # 優先切 main_text，若無則以 explanation 或 claim 作為內容
+    # Prioritize main_text for chunking; fallback to combined claim and explanation
     source_text = main_text if main_text else f"{claim} {explanation}"
     chunks = split_into_chunks(source_text, chunk_size=250, overlap=50)
 
-    # 至少保留一個 Chunk（標題本體）
+    # Ensure at least one chunk exists per record
     if not chunks:
         chunks = [claim]
 
     for chunk in chunks:
-        # 關鍵：每個段落開頭附帶標題提供上下文語意
+        # Prepend claim title to ground each chunk with global context
         text_to_embed = f"Title: {claim}\nContent: {chunk}"
         
         chunk_records.append({
@@ -60,7 +64,7 @@ for _, row in df.iterrows():
 chunk_df = pd.DataFrame(chunk_records)
 print(f"Total chunks created: {len(chunk_df)}")
 
-# 5. 批次推論產生向量
+# 5. Batch vector inference
 print("Generating embeddings for all chunks...")
 embeddings = model.encode(
     chunk_df["text_to_embed"].tolist(),
@@ -71,7 +75,7 @@ embeddings = model.encode(
 
 chunk_df["embedding"] = embeddings.tolist()
 
-# 6. 輸出 Parquet
+# 6. Export serialized Parquet dataset
 OUTPUT_PARQUET_PATH = "data/factcheck_vectors.parquet"
 chunk_df.to_parquet(OUTPUT_PARQUET_PATH, index=False)
 print(f"Successfully generated {OUTPUT_PARQUET_PATH} with {len(chunk_df)} chunk records!")

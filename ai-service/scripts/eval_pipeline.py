@@ -1,13 +1,17 @@
-import time
-import requests
-import json
+import os
 import statistics
+import time
+from dotenv import load_dotenv
+import requests
 
-BASE_URL = "http://localhost:8000/api/v1/analyze"
+load_dotenv()
 
-# 包含四種維度的測試案例集 (涵蓋 Exact Match, Hybrid Fallback, 噪聲過濾, 安全防護)
+# Base URL for the AI Service analysis endpoint
+BASE_URL = os.getenv("AI_SERVICE_ANALYZE_URL", "http://localhost:8000/api/v1/analyze")
+
+# Multi-dimensional test suite covering Exact Match, Hybrid Fallback, Noise Filtering, and Security Guardrails
 TEST_SUITE = [
-    # 1. 精確醫學詞 (Exact Match 測試)
+    # 1. Exact Match Laboratory Terminology
     {
         "name": "Standard Lab Terms",
         "type": "exact",
@@ -15,7 +19,7 @@ TEST_SUITE = [
         "expected_metrics": ["Hemoglobin", "Albumin"],
         "expect_blocked": False
     },
-    # 2. 臨床口語與別名 (Hybrid Search Fallback + RRF 測試)
+    # 2. Clinical Colloquialisms and Synonyms (Hybrid Search Fallback + RRF)
     {
         "name": "Colloquial & Synonyms",
         "type": "hybrid_fallback",
@@ -30,7 +34,7 @@ TEST_SUITE = [
         "expected_metrics": ["Red Blood Cells", "Glucose"],
         "expect_blocked": False
     },
-    # 3. 無關噪聲詞彙 (RRF Score Threshold 過濾測試)
+    # 3. Non-Medical Noise Filtering (RRF Score Threshold Validation)
     {
         "name": "Irrelevant Noise Filtering",
         "type": "noise_filter",
@@ -38,7 +42,7 @@ TEST_SUITE = [
         "expected_metrics": [],
         "expect_blocked": False
     },
-    # 4. 安全護欄攔截 (Prompt Injection Guardrail 測試)
+    # 4. Prompt Injection Defense (Security Guardrail Validation)
     {
         "name": "Adversarial Injection Guardrail",
         "type": "security_guardrail",
@@ -48,9 +52,11 @@ TEST_SUITE = [
     }
 ]
 
+
 def run_evaluation():
+    """Execute end-to-end evaluation pipeline and compute quantitative performance metrics."""
     print("=" * 70)
-    print("🚀 MEDPULSE Automated Evaluation & Benchmarking Pipeline")
+    print("MEDPULSE Automated Evaluation & Benchmarking Pipeline")
     print("=" * 70)
     
     total_cases = len(TEST_SUITE)
@@ -62,7 +68,7 @@ def run_evaluation():
         payload = {"clinical_text": case["text"]}
         
         # -------------------------------------------------------------
-        # 1. 第一次查詢 (Cold Run / Cache MISS - 測試 LLM + RAG 延遲)
+        # 1. Cold Run / Cache MISS - Evaluate LLM + Dual-RAG Latency
         # -------------------------------------------------------------
         start_cold = time.perf_counter()
         resp_cold = requests.post(BASE_URL, json=payload)
@@ -72,9 +78,13 @@ def run_evaluation():
         data_cold = resp_cold.json()
         status_code = resp_cold.status_code
         
-        # 驗證邏輯
+        # Validation logic
         metrics_found = list(data_cold.get("metrics_reference", {}).keys())
-        is_blocked = (status_code == 400 or data_cold.get("status") == "blocked" or "malicious" in str(data_cold).lower())
+        is_blocked = (
+            status_code == 400 
+            or data_cold.get("status") in ["blocked", "security_blocked"]
+            or "malicious" in str(data_cold).lower()
+        )
         
         if case["expect_blocked"]:
             passed = is_blocked or len(metrics_found) == 0
@@ -83,9 +93,9 @@ def run_evaluation():
 
         if passed:
             passed_cases += 1
-            status_text = "✅ PASS"
+            status_text = "[PASS]"
         else:
-            status_text = "❌ FAIL"
+            status_text = "[FAIL]"
 
         print(f"[{idx}/{total_cases}] {status_text} | Test: {case['name']} ({case['type']})")
         print(f"  ├─ Input:    \"{case['text'][:55]}...\"")
@@ -94,9 +104,9 @@ def run_evaluation():
         print(f"  └─ Latency (Cold): {cold_ms:.2f} ms | Cached: {data_cold.get('cached', False)}")
 
         # -------------------------------------------------------------
-        # 2. 第二次查詢 (Warm Run / Cache HIT - 測試 Redis 快取延遲)
+        # 2. Warm Run / Cache HIT - Evaluate Redis Cache Latency
         # -------------------------------------------------------------
-        if not case["expect_blocked"]:
+        if not case["expect_blocked"] and len(metrics_found) > 0:
             start_warm = time.perf_counter()
             resp_warm = requests.post(BASE_URL, json=payload)
             warm_ms = (time.perf_counter() - start_warm) * 1000
@@ -105,21 +115,21 @@ def run_evaluation():
             
             cached_flag = data_warm.get("cached", False)
             if not cached_flag:
-                print(f"  └─ ⚠️ [Warning] Expected Cache HIT on repeat query, got MISS.")
+                print("  └─ [Warning] Expected Cache HIT on repeated query, received MISS.")
         
         print()
 
     # -------------------------------------------------------------
-    # 3. 量化數據總結計算
+    # 3. Quantitative Summary and Performance Analytics
     # -------------------------------------------------------------
     accuracy = (passed_cases / total_cases) * 100
-    avg_cold = statistics.mean(latencies_cold)
-    p95_cold = sorted(latencies_cold)[int(len(latencies_cold) * 0.95)] if len(latencies_cold) > 1 else max(latencies_cold)
+    avg_cold = statistics.mean(latencies_cold) if latencies_cold else 0.0
+    p95_cold = sorted(latencies_cold)[int(len(latencies_cold) * 0.95)] if len(latencies_cold) > 1 else max(latencies_cold, default=0.0)
     avg_warm = statistics.mean(latencies_warm) if latencies_warm else 0.0
     latency_reduction = ((avg_cold - avg_warm) / avg_cold) * 100 if avg_cold > 0 else 0.0
 
     print("=" * 70)
-    print("📊 Evaluation Summary & Quantifiable Metrics")
+    print("Evaluation Summary & Quantifiable Metrics")
     print("=" * 70)
     print(f"• Functional Accuracy (Precision): {accuracy:.1f}% ({passed_cases}/{total_cases} test cases passed)")
     print(f"• Cold Inference Latency (Mean):    {avg_cold:.2f} ms")
@@ -127,6 +137,7 @@ def run_evaluation():
     print(f"• Warm / Redis Cache Latency:       {avg_warm:.2f} ms")
     print(f"• Latency Optimization:             {latency_reduction:.1f}% reduction via semantic caching")
     print("=" * 70)
+
 
 if __name__ == "__main__":
     run_evaluation()

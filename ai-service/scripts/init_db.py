@@ -4,9 +4,7 @@ import psycopg2
 from psycopg2.extras import execute_values
 
 
-# ==========================================
-# 1. 權威合規的 MedlinePlus 官方物理定義字典
-# ==========================================
+# 1. MedlinePlus Clinical Metric Definitions
 METRIC_DEFINITIONS = {
     "RDW": "A red cell distribution width (RDW) test measures how much the volume and size of your red blood cells (erythrocytes) varies.",
     "Red Blood Cells": "A red blood cell (RBC) count measures the number of red blood cells, also known as erythrocytes, in your blood. Red blood cells are made in your bone marrow, the spongy tissue inside your large bones. They contain hemoglobin, an iron-rich protein that carries oxygen from your lungs to every cell in your body. Your cells need oxygen to grow, reproduce, and make energy for you to function. An RBC count that is higher or lower than normal is often the first sign of an illness.",
@@ -23,7 +21,7 @@ METRIC_DEFINITIONS = {
     "Urea Nitrogen": "Urea nitrogen is a waste product that forms as your body breaks down proteins. It's carried in your blood and then removed by your kidneys when you urinate (pee).",
     "Calcium, Total": "Total calcium test measures all the calcium in your blood. You have two types of blood calcium that are normally present in about equal amounts: 1. Bound calcium is attached to proteins in your blood. 2. Free calcium is not attached to proteins. It's also called ionized calcium. This form of blood calcium is active in many body functions.",
     "Sodium": "Sodium is an element that the body needs to work properly. Salt contains sodium.",
-    "Potassium": "Potassium is a mineral that your body needs to work properly. It is a type of electrolyte. It helps your nerves to function and muscles to contract. It helps your heartbeat stay regular." ,
+    "Potassium": "Potassium is a mineral that your body needs to work properly. It is a type of electrolyte. It helps your nerves to function and muscles to contract. It helps your heartbeat stay regular.",
     "Anion Gap": "The anion gap blood test shows whether your electrolytes are out of balance or if your blood is too acidic or not acidic enough.",
     "Creatinine": "Creatinine is a normal waste product in your body. It's made when you use your muscles and some of the muscle tissue breaks down.",
     "Glucose": "Blood glucose, or blood sugar, is the main sugar found in your blood. It is your body's primary source of energy. It comes from the food you eat. Your body breaks down most of that food into glucose and releases it into your bloodstream.",
@@ -32,13 +30,14 @@ METRIC_DEFINITIONS = {
 
 
 def init_postgres_db():
-    print("1. 正在連接本地 PostgreSQL 資料庫...")
-    # ==========================================
-    # ⚠️ 請將以下參數改成你本地電腦的 PostgreSQL 帳號密碼
-    # ==========================================
+    """
+    Initialize PostgreSQL relational schema for clinical metrics and enable
+    the pgvector extension with HNSW indexing for vector fact-checking.
+    """
+    print("1. Connecting to PostgreSQL database...")
     conn_params = {
         "dbname": os.getenv("DB_NAME", "med_db"),
-        "user": os.getenv("DB_USER", "yilin"),
+        "user": os.getenv("DB_USER", "postgres"),
         "password": os.getenv("DB_PASSWORD", ""),
         "host": os.getenv("DB_HOST", "localhost"),
         "port": os.getenv("DB_PORT", "5432")
@@ -47,10 +46,9 @@ def init_postgres_db():
     try:
         conn = psycopg2.connect(**conn_params)
         cursor = conn.cursor()
-        print("連線成功！")
+        print("Database connection established successfully.")
         
-        print("2. 正在建立 medical_metrics 資料表...")
-        # 建立資料表，CASCADE 會連同相關的約束一起删乾淨，確保環境純淨
+        print("2. Creating 'medical_metrics' schema...")
         cursor.execute("DROP TABLE IF EXISTS medical_metrics CASCADE;")
         cursor.execute("""
             CREATE TABLE medical_metrics (
@@ -66,23 +64,22 @@ def init_postgres_db():
             );
         """)
         
-        print("3. 正在讀取清洗好的 CSV，並組裝 MedlinePlus 權威定義...")
+        print("3. Loading cleaned CSV dataset and mapping MedlinePlus clinical definitions...")
         df = pd.read_csv('data/cleaned_metrics_base.csv')
         
-        # 使用 .map() 將 MedlinePlus 定義對應到對應的 label 上
+        # Map authoritative definitions by metric label with a fallback default
         df['metric_definition'] = df['label'].map(METRIC_DEFINITIONS).fillna("Standard clinical metric definition not found.")
         
-        # 【重要修正：資料防錯位】
-        # 顯式指定 DataFrame 的欄位順序，使其跟下方 SQL INSERT 的欄位順序 (100% 完美對齊)
+        # Explicit column ordering to guarantee alignment with the SQL INSERT statement
         df_ordered = df[[
             'itemid', 'label', 'fluid', 'category', 
             'ref_range_lower', 'ref_range_upper', 'valueuom', 'metric_definition'
         ]]
         
-        # 轉成 tuple 清單以利 execute_values 批次高效寫入
+        # Convert records to a list of tuples for batch execution
         records_to_insert = [tuple(x) for x in df_ordered.to_numpy()]
         
-        print("4. 正在將 20 筆權威指標資料匯入 PostgreSQL...")
+        print(f"4. Ingesting {len(records_to_insert)} clinical metric records into PostgreSQL...")
         insert_query = """
             INSERT INTO medical_metrics (
                 itemid, metric_label, fluid, category, 
@@ -90,23 +87,25 @@ def init_postgres_db():
             ) VALUES %s
         """
         execute_values(cursor, insert_query, records_to_insert)
-        
-        # 提交(Commit)變更，這一步才會真正寫入硬碟
         conn.commit()
-        print("【階段一】資料庫建置與資料匯入全部完成！")
+        print("Clinical metrics table initialized and populated successfully.")
         
-        # 驗證 RAG 查詢：模擬後端未來要做的 SELECT
-        cursor.execute("SELECT metric_label, ref_range_lower, ref_range_upper, valueuom, metric_definition FROM medical_metrics WHERE metric_label = 'Glucose';")
-        print("\n 抽查資料庫驗證成功 (Glucose):")
+        # Spot check verification query
+        cursor.execute(
+            "SELECT metric_label, ref_range_lower, ref_range_upper, valueuom, metric_definition "
+            "FROM medical_metrics WHERE metric_label = 'Glucose';"
+        )
         row = cursor.fetchone()
-        print(f"指標名稱: {row[0]}")
-        print(f"參考範圍: {row[1]} ~ {row[2]} {row[3]}")
-        print(f"官方定義: {row[4]}")
+        if row:
+            print("\nDatabase verification check (Glucose):")
+            print(f"  Metric Label: {row[0]}")
+            print(f"  Reference Range: {row[1]} ~ {row[2]} {row[3]}")
+            print(f"  Definition: {row[4]}")
 
-        # =========================================================
-        # 步驟 2: 開啟 pgvector 擴充與建立闢謠向量資料表 (新增的內容)
-        # =========================================================
-        print("\n5. 正在建立 pgvector 擴充功能與闢謠向量資料表...")
+        # ====================================================================
+        # 2. Enable pgvector and create fact-checking vector schema with HNSW index
+        # ====================================================================
+        print("\n5. Enabling 'vector' extension and setting up 'factcheck_vectors' schema...")
         cursor.execute("CREATE EXTENSION IF NOT EXISTS vector;")
 
         cursor.execute("""
@@ -122,24 +121,23 @@ def init_postgres_db():
             );
         """)
 
-        # 建立 HNSW 向量索引（5ms 極速查詢）
+        # Create HNSW index for sub-10ms cosine similarity retrieval
         cursor.execute("""
             CREATE INDEX IF NOT EXISTS factcheck_vector_hnsw_idx 
             ON factcheck_vectors USING hnsw (embedding vector_cosine_ops);
         """)
         
-        # 統一 Commit 寫入硬碟
         conn.commit()
-        print("【階段一】資料庫結構建置 (MIMIC 指標 + pgvector 闢謠表) 全部完成！")
+        print("Database schema migration complete (MIMIC metrics + pgvector fact-check tables).")
 
     except Exception as e:
-        print(f"發生錯誤: {e}")
+        print(f"Database initialization error: {e}")
     finally:
-        # 無論成功失敗，都一定要關閉連線資源
         if 'cursor' in locals():
             cursor.close()
         if 'conn' in locals():
             conn.close()
+
 
 if __name__ == "__main__":
     init_postgres_db()

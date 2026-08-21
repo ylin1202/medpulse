@@ -1,11 +1,15 @@
+from typing import Any, Dict, List, Optional
 import asyncpg
-from typing import List, Dict, Any, Optional
+
 
 async def query_medical_metrics_async(
     metrics_list: List[str], 
     db_pool: Optional[asyncpg.Pool]
 ) -> Dict[str, Any]:
-    """非同步批次檢索醫學檢驗指標 (消除 N+1 查詢)"""
+    """
+    Asynchronously retrieve reference ranges and definitions for clinical lab metrics.
+    Batch queries PostgreSQL to prevent N+1 overhead and handles basic lemmatization.
+    """
     if not metrics_list or db_pool is None:
         return {}
 
@@ -13,6 +17,7 @@ async def query_medical_metrics_async(
     if not cleaned_metrics:
         return {}
 
+    # Include singularized variations to account for pluralized metric inputs
     search_terms = set(cleaned_metrics)
     for m in cleaned_metrics:
         if m.endswith("s") and len(m) > 1:
@@ -56,7 +61,10 @@ async def hybrid_search_fallback_async(
     top_k: int = 3,
     rrf_k: int = 60
 ) -> List[Dict[str, Any]]:
-    """Hybrid Search (Dense + Sparse) + RRF 融合查詢"""
+    """
+    Perform hybrid vector search (Dense Cosine Similarity + Sparse Full-Text Search)
+    fused with Reciprocal Rank Fusion (RRF) for semantic metric retrieval.
+    """
     if not query_text or db_pool is None:
         return []
 

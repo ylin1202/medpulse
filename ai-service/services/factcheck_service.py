@@ -1,16 +1,18 @@
-import os
-import inspect
 import asyncio
+import inspect
 import logging
+import os
 import asyncpg
 from google import genai
 from sentence_transformers import SentenceTransformer
+
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+
 class FactCheckRAGService:
-    """全英文健康闢謠 Vector RAG 服務類別 (Singleton)"""
+    """Singleton Vector RAG service for evidence-based health rumor verification and claim debunking."""
 
     def __init__(self, model_name: str = settings.EMBEDDING_MODEL_NAME):
         logger.info(f"[Startup] Initializing embedding model: {model_name}...")
@@ -27,7 +29,7 @@ class FactCheckRAGService:
             logger.warning("[Startup] GEMINI_API_KEY is empty or not configured!")
 
     async def _generate_rag_summary(self, user_query: str, matched_data: dict, correlation_id: str) -> str:
-        """Generation Stage: Synthesizes fact-check context using Gemini with fallback & retry."""
+        """Generation Stage: Synthesize fact-check context using Gemini with automated retries."""
         if not self.gemini_client:
             return matched_data.get("explanation", "")
 
@@ -49,7 +51,7 @@ class FactCheckRAGService:
         3. Keep the response concise and objective (around 100-150 words).
         """)
 
-        candidate_models = ["gemini-3.6-flash"]
+        candidate_models = ["gemini-2.5-flash", "gemini-1.5-flash"]
 
         for model_name in candidate_models:
             for attempt in range(2):
@@ -64,7 +66,7 @@ class FactCheckRAGService:
                         logger.info(f"[{correlation_id}] Successfully generated summary using {model_name}.")
                         return response.text.strip()
                 except Exception as e:
-                    logger.warning(f"[{correlation_id}] Model {model_name} attempt {attempt+1} failed: {e}")
+                    logger.warning(f"[{correlation_id}] Model {model_name} attempt {attempt + 1} failed: {e}")
                     if "503" in str(e):
                         await asyncio.sleep(0.5 * (attempt + 1))
 
@@ -74,12 +76,16 @@ class FactCheckRAGService:
     async def search(
         self, user_query: str, db_pool: asyncpg.Pool, top_k: int = 1, correlation_id: str = "UNKNOWN"
     ) -> dict:
+        """
+        Execute vector similarity search across verified claims in PostgreSQL (pgvector)
+        and augment matched evidence with AI-synthesized clinical reasoning.
+        """
         if not db_pool:
             return {"found": False, "message": "Database connection pool is uninitialized."}
         if not user_query.strip():
             return {"found": False, "message": "Query text cannot be empty."}
 
-        # 1. Retrieval
+        # 1. Retrieval (Embed query and search vector index)
         query_vector = await asyncio.to_thread(
             lambda: self.model.encode([user_query], normalize_embeddings=True)[0].tolist()
         )
@@ -107,10 +113,10 @@ class FactCheckRAGService:
             # 2. Generation (Grounded Synthesis)
             rag_explanation = await self._generate_rag_summary(user_query, row_dict, correlation_id)
 
-            # 3. 提取資料庫原始資料
+            # 3. Extract ground-truth literature context from database
             raw_db_text = (row_dict.get("explanation") or row_dict.get("main_text") or "").strip()
             
-            # 優先抓取資料庫中的 sources 欄位
+            # Prioritize sources metadata column
             raw_sources = (row_dict.get("sources") or row_dict.get("claim_url") or "").strip()
 
             return {
@@ -121,11 +127,11 @@ class FactCheckRAGService:
                     "matched_claim": row_dict.get("claim", ""),
                     "claim": row_dict.get("claim", ""),
                     "verdict": str(row_dict.get("label", "UNVERIFIED")).upper(),
-                    "explanation": rag_explanation,                    # AI 生成解答 (彈窗用)
-                    "original_explanation": raw_db_text,               # PUBHEALTH 原始文獻 (詳情頁用)
+                    "explanation": rag_explanation,                    # AI-synthesized explanation for modal preview
+                    "original_explanation": raw_db_text,               # PUBHEALTH literature source text for details view
                     "summary": rag_explanation[:150] + "..." if len(rag_explanation) > 150 else rag_explanation,
-                    "claim_url": raw_sources,                          # 完整原始 sources 網址
-                    "source": raw_sources,                             # 來源內容
+                    "claim_url": raw_sources,                          # Full source reference URL
+                    "source": raw_sources,                             # Evidence source
                     "sources": raw_sources,
                     "score": score,
                 }]
@@ -134,5 +140,6 @@ class FactCheckRAGService:
         except Exception as e:
             logger.error(f"[{correlation_id}] RAG retrieval failed: {e}", exc_info=True)
             return {"found": False, "message": str(e), "data": []}
+
 
 factcheck_service = FactCheckRAGService()

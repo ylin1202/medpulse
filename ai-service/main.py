@@ -1,28 +1,37 @@
+from contextlib import asynccontextmanager
+import logging
 import time
 import uuid
-import logging
-from contextlib import asynccontextmanager
 
 import asyncpg
-import redis.asyncio as aioredis
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+import redis.asyncio as aioredis
 
-from app.core.config import settings
 from app.api.v1.router import api_router
+from app.core.config import settings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("[Startup] Establishing PostgreSQL asyncpg connection pool...")
+    """
+    Application lifespan manager for initializing and tearing down asynchronous
+    database connection pools and Redis cache clients.
+    """
+    logger.info("[Startup] Establishing PostgreSQL AsyncPG connection pool...")
     app.state.db_pool = await asyncpg.create_pool(**settings.asyncpg_dsn_dict)
     logger.info("[Startup] PostgreSQL connection pool established successfully!")
 
     logger.info("[Startup] Connecting to Redis cache server...")
-    app.state.redis = aioredis.from_url(settings.redis_connection_url, encoding="utf-8", decode_responses=True)
+    app.state.redis = aioredis.from_url(
+        settings.redis_connection_url,
+        encoding="utf-8",
+        decode_responses=True
+    )
     logger.info("[Startup] Redis connected successfully!")
 
     yield
@@ -33,13 +42,18 @@ async def lifespan(app: FastAPI):
     await app.state.redis.close()
     logger.info("[Shutdown] All backend resources released gracefully.")
 
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    description="結合微調 Gemma-3、LangGraph 自適應狀態機與 pgvector 語意闢謠的高效能雙引擎醫療 API",
+    description=(
+        "Dual-Engine Medical API combining fine-tuned Gemma-3, "
+        "LangGraph adaptive state machines, and pgvector semantic fact-checking."
+    ),
     version=settings.VERSION,
     lifespan=lifespan,
 )
 
+# Cross-Origin Resource Sharing (CORS) configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -48,8 +62,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.middleware("http")
 async def add_correlation_id_and_timer(request: Request, call_next):
+    """
+    HTTP middleware attaching distributed tracing Correlation IDs and
+    measuring execution latency across request lifecycles.
+    """
     correlation_id = request.headers.get("X-Correlation-ID", str(uuid.uuid4()))
     request.state.correlation_id = correlation_id
     
@@ -63,10 +82,12 @@ async def add_correlation_id_and_timer(request: Request, call_next):
     logger.info(f"[{correlation_id}] {request.method} {request.url.path} latency: {process_time:.4f}s")
     return response
 
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    """Global exception handler to capture unhandled errors and return structured diagnostics."""
     correlation_id = getattr(request.state, "correlation_id", "UNKNOWN")
-    logger.error(f"[{correlation_id}] Internal Server Error Cause: {str(exc)}")
+    logger.error(f"[{correlation_id}] Internal Server Error: {str(exc)}", exc_info=True)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
@@ -76,9 +97,16 @@ async def global_exception_handler(request: Request, exc: Exception):
         }
     )
 
-# 註冊 v1 路由
+
+# Register API v1 versioned routes
 app.include_router(api_router, prefix="/api/v1")
 
-@app.get("/health", summary="伺服器健康檢查")
+
+@app.get("/health", summary="Service Health Check")
 async def health_check():
-    return {"status": "healthy", "service": settings.PROJECT_NAME, "version": settings.VERSION}
+    """Endpoint verifying service availability, metadata, and active deployment version."""
+    return {
+        "status": "healthy",
+        "service": settings.PROJECT_NAME,
+        "version": settings.VERSION
+    }
