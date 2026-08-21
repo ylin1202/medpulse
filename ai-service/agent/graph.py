@@ -291,7 +291,7 @@ async def clinical_synthesis_node(state: AgentState) -> Dict[str, Any]:
     """)
 
     # 2. Generation (call Gemini API with fallback cascade on quota limits)
-    candidate_models = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
+    candidate_models = ["gemini-3.6-flash", "gemini-3.5-flash"]
     synthesis_result = ""
 
     for model_name in candidate_models:

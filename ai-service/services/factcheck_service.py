@@ -51,7 +51,7 @@ class FactCheckRAGService:
         3. Keep the response concise and objective (around 100-150 words).
         """)
 
-        candidate_models = ["gemini-2.5-flash", "gemini-1.5-flash"]
+        candidate_models = ["gemini-3.6-flash", "gemini-3.5-flash"]
 
         for model_name in candidate_models:
             for attempt in range(2):
