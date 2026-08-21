@@ -1,11 +1,13 @@
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.utils.db import Database
 
+
 class UserModel:
-    """使用者資料庫操作 Class (原生 SQL 封裝)"""
+    """Data Access Object (DAO) for managing user accounts and authentication using raw SQL."""
 
     @staticmethod
     def create_table():
+        """Create the `users` table schema if it does not exist."""
         query = """
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
@@ -20,7 +22,7 @@ class UserModel:
 
     @staticmethod
     def create_user(username, email, password):
-        """新增使用者 (密碼自動哈希加密)"""
+        """Create a new user record with a securely hashed password."""
         hashed_password = generate_password_hash(password)
         query = """
         INSERT INTO users (username, email, password_hash)
@@ -33,17 +35,17 @@ class UserModel:
 
     @staticmethod
     def get_by_email(email):
-        """根據 Email 尋找使用者"""
+        """Retrieve user credentials and account details by email address."""
         query = "SELECT * FROM users WHERE email = %s;"
         return Database.execute_query(query, (email,), fetchone=True)
 
     @staticmethod
     def verify_password(stored_password_hash, provided_password):
-        """驗證密碼是否正確"""
+        """Verify candidate plaintext password against stored cryptographic hash."""
         return check_password_hash(stored_password_hash, provided_password)
     
     @staticmethod
     def verify_user_email(user_id):
+        """Mark user account as verified upon email confirmation."""
         query = "UPDATE users SET is_verified = TRUE WHERE id = %s RETURNING id, is_verified;"
         return Database.execute_query(query, (user_id,), fetchone=True, commit=True)
-    

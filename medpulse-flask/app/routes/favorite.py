@@ -1,16 +1,21 @@
-from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask import Blueprint, jsonify, request
+from flask_jwt_extended import get_jwt_identity, jwt_required
+
 from app.models.favorite import FavoriteModel
 
 favorite_bp = Blueprint("favorite", __name__, url_prefix="/api/v1/favorites")
 
+
 class FavoriteController:
-    """使用者藥品收藏夾 API Controller"""
+    """Controller handling user medication bookmarks, favorites management, and status checks."""
 
     @staticmethod
     @jwt_required()
     def add_favorite():
-        """新增藥品收藏 (POST /api/v1/favorites)"""
+        """
+        Add a medication to the authenticated user's favorites.
+        Route: POST /api/v1/favorites
+        """
         try:
             current_user_id = int(get_jwt_identity())
             data = request.get_json() or {}
@@ -32,7 +37,10 @@ class FavoriteController:
     @staticmethod
     @jwt_required()
     def remove_favorite(drug_id):
-        """取消藥品收藏 (DELETE /api/v1/favorites/<drug_id>)"""
+        """
+        Remove a medication from the authenticated user's favorites.
+        Route: DELETE /api/v1/favorites/<drug_id>
+        """
         try:
             current_user_id = int(get_jwt_identity())
             FavoriteModel.remove_favorite(current_user_id, drug_id)
@@ -47,7 +55,10 @@ class FavoriteController:
     @staticmethod
     @jwt_required()
     def check_favorite(drug_id):
-        """檢查藥品是否已被收藏 (GET /api/v1/favorites/check/<drug_id>)"""
+        """
+        Check if a specific medication is favorited by the authenticated user.
+        Route: GET /api/v1/favorites/check/<drug_id>
+        """
         try:
             current_user_id = int(get_jwt_identity())
             is_fav = FavoriteModel.is_favorited(current_user_id, drug_id)
@@ -60,7 +71,10 @@ class FavoriteController:
     @staticmethod
     @jwt_required()
     def get_favorites():
-        """取得使用者的所有收藏藥品列表 (GET /api/v1/favorites)"""
+        """
+        Retrieve all favorited medications for the authenticated user.
+        Route: GET /api/v1/favorites
+        """
         try:
             current_user_id = int(get_jwt_identity())
             favorites = FavoriteModel.get_user_favorites(current_user_id)
@@ -73,7 +87,7 @@ class FavoriteController:
             return jsonify({"error": f"Failed to fetch favorites: {str(e)}"}), 500
 
 
-# RESTful 路由映射
+# RESTful Route Bindings
 favorite_bp.route("", methods=["POST"])(FavoriteController.add_favorite)
 favorite_bp.route("/<int:drug_id>", methods=["DELETE"])(FavoriteController.remove_favorite)
 favorite_bp.route("/check/<int:drug_id>", methods=["GET"])(FavoriteController.check_favorite)

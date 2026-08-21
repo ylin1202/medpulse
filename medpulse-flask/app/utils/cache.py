@@ -2,7 +2,7 @@ import json
 import os
 import redis
 
-# ⚡ 初始化快取專用的 Redis Client
+# Initialize dedicated Redis client for caching layer
 redis_cache = redis.StrictRedis(
     host=os.getenv("REDIS_HOST", "localhost"),
     port=int(os.getenv("REDIS_PORT", 6379)),
@@ -10,29 +10,35 @@ redis_cache = redis.StrictRedis(
     decode_responses=True
 )
 
+
 class CacheService:
-    """通用 Redis 查詢快取服務"""
+    """Universal Redis query caching and distributed state management service."""
 
     @staticmethod
     def get_client() -> redis.StrictRedis:
-        """提供原生 Redis Client 實例供特定操作（如驗證碼、黑名單）使用"""
+        """Provide native Redis client instance for specialized operations (e.g., OTP codes, blocklists)."""
         return redis_cache
 
     @staticmethod
     def get(key):
-        """讀取快取，自動將 JSON 字串轉回 Python 字典/列表"""
+        """
+        Retrieve cached value and deserialize JSON payload into native Python dictionaries/lists.
+        Fails silently to prevent caching outages from breaking primary database queries.
+        """
         try:
             data = redis_cache.get(key)
             if data:
                 return json.loads(data)
             return None
         except Exception:
-            # 防禦性設計：即使 Redis 掛了，也不要影響主業務查詢
+            # Defensive fallback: cache failure should degrade gracefully without interrupting business logic
             return None
 
     @staticmethod
     def set(key, value, expire=600):
-        """寫入快取，將資料序列化為 JSON，預設存活 10 分鐘 (600秒)"""
+        """
+        Serialize payload to JSON and write to Redis with a configurable TTL (default: 600s / 10 mins).
+        """
         try:
             json_data = json.dumps(value)
             redis_cache.set(key, json_data, ex=expire)
@@ -41,7 +47,7 @@ class CacheService:
 
     @staticmethod
     def delete_pattern(pattern):
-        """根據 Pattern 批量刪除快取"""
+        """Batch invalidate cache entries matching the specified wildcard pattern."""
         try:
             keys = redis_cache.keys(pattern)
             if keys:

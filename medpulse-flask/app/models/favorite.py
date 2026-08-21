@@ -1,11 +1,12 @@
 from app.utils.db import Database
 
+
 class FavoriteModel:
-    """使用者藥品收藏夾 (User-Drug Favorites) 資料庫操作 Class"""
+    """Data Access Object (DAO) for managing user medication bookmarks/favorites."""
 
     @staticmethod
     def create_table():
-        """建立 user_favorites 資料表 (外鍵關聯 users 與 drugs)"""
+        """Create the `user_favorites` table with foreign key cascades and unique constraints."""
         query = """
         CREATE TABLE IF NOT EXISTS user_favorites (
             id SERIAL PRIMARY KEY,
@@ -19,8 +20,12 @@ class FavoriteModel:
 
     @staticmethod
     def add_favorite(user_id, drug_id):
-        """新增藥品收藏 (若已收藏則回傳現有紀錄)"""
-        # 1. 嘗試寫入
+        """
+        Add a drug to the user's favorites list.
+
+        Performs an idempotent insert; returns existing bookmark record if already favorited.
+        """
+        # 1. Attempt insert with conflict avoidance
         insert_query = """
         INSERT INTO user_favorites (user_id, drug_id)
         VALUES (%s, %s)
@@ -29,7 +34,7 @@ class FavoriteModel:
         """
         result = Database.execute_query(insert_query, (user_id, int(drug_id)), fetchone=True, commit=True)
         
-        # 2. 若原本已收藏 (result 為 None)，則查詢現有紀錄回傳
+        # 2. Fetch existing bookmark record if conflict occurred (result is None)
         if not result:
             select_query = """
             SELECT id, user_id, drug_id, created_at 
@@ -42,7 +47,7 @@ class FavoriteModel:
 
     @staticmethod
     def remove_favorite(user_id, drug_id):
-        """取消藥品收藏"""
+        """Remove a drug from the user's favorites list."""
         query = """
         DELETE FROM user_favorites
         WHERE user_id = %s AND drug_id = %s;
@@ -52,7 +57,7 @@ class FavoriteModel:
 
     @staticmethod
     def is_favorited(user_id, drug_id):
-        """檢查特定藥品是否已被該使用者收藏"""
+        """Check if a specific medication is favorited by the user."""
         query = """
         SELECT 1 FROM user_favorites
         WHERE user_id = %s AND drug_id = %s
@@ -63,7 +68,7 @@ class FavoriteModel:
 
     @staticmethod
     def get_user_favorites(user_id):
-        """取得使用者收藏的所有藥品詳細資訊 (直接 JOIN drugs 表)"""
+        """Retrieve all favorited medications for a user with joined drug metadata."""
         query = """
         SELECT 
             f.id AS favorite_id,

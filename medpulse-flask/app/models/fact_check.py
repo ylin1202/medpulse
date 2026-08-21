@@ -1,18 +1,21 @@
 from app.utils.db import Database
 
+
 class FactCheckModel:
-    """食藥/健康闢謠 PUBHEALTH 資料庫操作 Class"""
+    """Data Access Object (DAO) for querying PUBHEALTH public health fact-checking records."""
 
     @staticmethod
     def get_list(page=1, limit=10, keyword=None):
         """
-        取得闢謠列表 (支援分頁與關鍵字搜尋)
-        註：明確列出欄位，特意排除 embedding 欄位以優化 API 傳輸效能
+        Retrieve a paginated list of fact-checked claims with keyword search support.
+
+        Note: Explicitly selects projection columns and excludes high-dimensional 
+        vector embeddings to optimize API throughput and serialization latency.
         """
         offset = (page - 1) * limit
         params = []
         
-        # 基礎 SQL (排除 embedding)
+        # Base SQL query (excluding vector embeddings)
         base_query = """
             SELECT id, claim, explanation, label, claim_url, main_text, sources
             FROM factcheck_vectors
@@ -25,11 +28,15 @@ class FactCheckModel:
             search_pattern = f"%{keyword}%"
             params.extend([search_pattern, search_pattern])
 
-        # 查詢總筆數 (供前端計算總頁數)
-        total_count_res = Database.execute_query(count_query + where_clause, params=params if keyword else None, fetchone=True)
+        # Retrieve total matching count for pagination metadata
+        total_count_res = Database.execute_query(
+            count_query + where_clause, 
+            params=params if keyword else None, 
+            fetchone=True
+        )
         total_items = total_count_res["count"] if total_count_res else 0
 
-        # 分頁查詢資料
+        # Retrieve paginated records
         query = f"{base_query}{where_clause} ORDER BY id ASC LIMIT %s OFFSET %s;"
         query_params = params + [limit, offset]
         
@@ -47,7 +54,7 @@ class FactCheckModel:
 
     @staticmethod
     def get_by_id(item_id):
-        """根據 ID 取得單篇闢謠詳細資訊"""
+        """Retrieve detailed information for a specific fact-check record by ID."""
         query = """
             SELECT id, claim, explanation, label, claim_url, main_text, sources
             FROM factcheck_vectors

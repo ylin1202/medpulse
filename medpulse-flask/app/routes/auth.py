@@ -1,47 +1,52 @@
 from datetime import datetime, timezone
-from flask import Blueprint, request, jsonify, current_app
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
+import random
+from flask import Blueprint, current_app, jsonify, request
+from flask_jwt_extended import create_access_token, get_jwt, get_jwt_identity, jwt_required
 from flask_mail import Message
+
 from app.extensions import mail
 from app.models.user import UserModel
-from app.utils.limiter import limiter
 from app.utils.cache import CacheService
-import random
+from app.utils.limiter import limiter
 
-# 建立 JWT Auth 的 Blueprint 模組
+# Initialize JWT Authentication Blueprint
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/v1/auth")
 
-# 共用 CacheService 封裝的 Redis Client 實例與連線池
+# Shared Redis client instance and connection pool from CacheService
 redis_client = CacheService.get_client()
 
 
 class AuthController:
-    """封裝 Auth 相關 API 邏輯的 Class"""
+    """Controller handling user authentication, verification codes, and session lifecycles."""
 
-    # 發送驗證碼，限制每個 IP 每分鐘只能打 3 次，防止簡訊/郵件被刷爆
+    # Rate limit: 3 requests per minute per IP to prevent spamming the SMTP server
     @limiter.limit("3 per minute")
     @staticmethod
     def send_code():
-        """發送 6 位數 Email 驗證碼 API"""
+        """Send a 6-digit email verification code via SMTP."""
         data = request.get_json() or {}
         email = data.get("email")
 
         if not email:
             return jsonify({"error": "Email is required"}), 400
 
-        # 1. 產生 6 位數隨機數字
+        # Generate a 6-digit one-time password (OTP)
         code = f"{random.randint(100000, 999999)}"
 
         try:
-            # 2. 將驗證碼存入 Redis (Key: verify:user@example.com，有效時間 300 秒/5分鐘)
+            # Store OTP in Redis with a 5-minute TTL (300 seconds)
             redis_client.setex(f"verify:{email}", 300, code)
 
-            # 3. 透過 SMTP 寄出信件
+            # Dispatch verification email via SMTP
             msg = Message(
                 subject="[MedPulse] Your Registration Verification Code",
                 sender=current_app.config.get("MAIL_USERNAME"),
                 recipients=[email],
-                body=f"Hello!\n\nYour verification code for MedPulse is: {code}\n\nThis code will expire in 5 minutes."
+                body=(
+                    f"Hello!\n\n"
+                    f"Your verification code for MedPulse is: {code}\n\n"
+                    f"This code will expire in 5 minutes."
+                ),
             )
             mail.send(msg)
 
@@ -50,39 +55,39 @@ class AuthController:
         except Exception as e:
             return jsonify({"error": f"Failed to send email: {str(e)}"}), 500
 
-    # 註冊 API，限制每個 IP 每分鐘最多試 5 次
+    # Rate limit: 5 registration attempts per minute per IP to prevent brute-force attacks
     @limiter.limit("5 per minute")
     @staticmethod
     def register():
-        """使用者註冊 API (含驗證碼比對)"""
+        """Register a new user account upon valid OTP code verification."""
         data = request.get_json() or {}
         username = data.get("username")
         email = data.get("email")
         password = data.get("password")
-        code = data.get("code") 
+        code = data.get("code")
 
-        # 1. 欄位驗證 (Edge Case 防護)
+        # Payload validation
         if not username or not email or not password or not code:
             return jsonify({"error": "Missing required fields: username, email, password, code"}), 400
 
-        # 2. 比對 Redis 中的驗證碼
+        # Verify OTP code against cached Redis entry
         saved_code = redis_client.get(f"verify:{email}")
         if not saved_code or saved_code != str(code):
             return jsonify({"error": "Invalid or expired verification code"}), 400
 
-        # 3. 檢查 Email 是否已被註冊
+        # Ensure email uniqueness
         existing_user = UserModel.get_by_email(email)
         if existing_user:
             return jsonify({"error": "Email is already registered"}), 409
 
         try:
-            # 4. 驗證成功！刪除 Redis 驗證碼防重複使用
+            # Delete cached OTP immediately to prevent replay attacks
             redis_client.delete(f"verify:{email}")
 
-            # 5. 建立新用戶 (UserModel 內部會對 password 進行 Hash)
+            # Persist user (UserModel handles cryptographic password hashing)
             new_user = UserModel.create_user(username, email, password)
-            
-            # 6. 簽發 JWT Token
+
+            # Issue JWT access token
             access_token = create_access_token(identity=str(new_user["id"]))
 
             return jsonify({
@@ -90,19 +95,19 @@ class AuthController:
                 "user": {
                     "id": new_user["id"],
                     "username": new_user["username"],
-                    "email": new_user["email"]
+                    "email": new_user["email"],
                 },
-                "access_token": access_token
+                "access_token": access_token,
             }), 201
 
         except Exception as e:
             return jsonify({"error": f"Failed to register user: {str(e)}"}), 500
 
-    # 登入 API，限制每個 IP 每分鐘最多試 5 次
+    # Rate limit: 5 login attempts per minute per IP
     @limiter.limit("5 per minute")
     @staticmethod
     def login():
-        """使用者登入 API"""
+        """Authenticate user credentials and issue an access token."""
         data = request.get_json() or {}
         email = data.get("email")
         password = data.get("password")
@@ -121,30 +126,30 @@ class AuthController:
             "user": {
                 "id": user["id"],
                 "username": user["username"],
-                "email": user["email"]
+                "email": user["email"],
             },
-            "access_token": access_token
+            "access_token": access_token,
         }), 200
 
     @staticmethod
     @jwt_required()
     def logout():
-        """處理使用者登出並將 Token 註銷存入黑名單"""
+        """Revoke current JWT by adding its unique token ID (JTI) to Redis blocklist."""
         try:
-            # 取得當前請求內攜帶的 JWT Payload 資料
+            # Extract JWT claims from request header
             jwt_data = get_jwt()
-            jti = jwt_data["jti"]  # 取得獨一無二的 Token ID
-            
-            # 計算 Token 的剩餘存活秒數 (過期時間戳 - 當前時間戳)
+            jti = jwt_data["jti"]
+
+            # Calculate remaining token lifespan (TTL) in seconds
             now = datetime.now(timezone.utc).timestamp()
             remains = max(int(jwt_data["exp"] - now), 1)
 
-            # 將 Token ID 丟進 Redis 黑名單，並設定其與 Token 同步過期
+            # Store revoked token ID in Redis with matching TTL
             redis_client.setex(f"blacklist:{jti}", remains, "revoked")
 
             return jsonify({
                 "status": "success",
-                "message": "Successfully logged out. Token has been revoked."
+                "message": "Successfully logged out. Token has been revoked.",
             }), 200
 
         except Exception as e:
@@ -153,16 +158,16 @@ class AuthController:
     @staticmethod
     @jwt_required()
     def get_profile():
-        """取得個人 Profile (需帶 Bearer JWT Token)"""
+        """Retrieve authenticated user identity from Bearer token."""
         current_user_id = get_jwt_identity()
         return jsonify({
             "user_id": current_user_id,
-            "status": "authenticated"
+            "status": "authenticated",
         }), 200
 
 
-# 綁定路由點 (Routes Mapping)
-auth_bp.route("/send-code", methods=["POST"])(AuthController.send_code) 
+# Endpoint Route Bindings
+auth_bp.route("/send-code", methods=["POST"])(AuthController.send_code)
 auth_bp.route("/register", methods=["POST"])(AuthController.register)
 auth_bp.route("/login", methods=["POST"])(AuthController.login)
 auth_bp.route("/logout", methods=["POST"])(AuthController.logout)

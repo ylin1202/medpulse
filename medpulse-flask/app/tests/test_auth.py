@@ -1,42 +1,42 @@
 import json
-import pytest
-from unittest.mock import patch, MagicMock
-from app import create_app
+from unittest.mock import MagicMock, patch
 from flask_jwt_extended import create_access_token
+import pytest
+
+from app import create_app
+
 
 class TestAuthAPI:
-    """使用者認證與註冊功能 (Auth) API 路由控制器的單元測試類別"""
+    """Unit test suite for authentication and user registration API route controllers."""
 
     @pytest.fixture(autouse=True)
     def setup_method(self):
-        """在每個測試方法執行前，自動初始化 Flask 測試客戶端、生成 Token 與共用變數"""
+        """Automatically initialize Flask test client, generate tokens, and set test fixtures."""
         app = create_app()
         app.config['TESTING'] = True
         app.config["RATELIMIT_ENABLED"] = False
         app.config['JWT_SECRET_KEY'] = 'test-jwt-secret-key-for-medpulse-auth-testing'
         app.config['MAIL_USERNAME'] = 'test-sender@medpulse.com'
-        
+
         self.client = app.test_client()
         self.base_url = "/api/v1/auth"
-        
-        # 準備共用的測試假資料 (配合全英文 data 環境)
+
+        # Shared mock credentials and test payload
         self.test_email = "test_email@example.com"
         self.test_username = "test_username"
         self.test_password = "secure_password123"
         self.test_code = "123456"
 
-        # 生成測試 Profile 專用的 Token
+        # Generate test JWT for profile-authenticated requests
         with app.app_context():
             self.token = create_access_token(identity="42")
         self.headers = {"Authorization": f"Bearer {self.token}"}
 
-    # ====================================================================
-    # 1. 測試：發送驗證碼 (POST /api/v1/auth/send-code)
-    # ====================================================================
+    # 1. Send OTP Verification Code (POST /api/v1/auth/send-code)
     @patch('app.routes.auth.mail')
     @patch('app.routes.auth.redis_client')
     def test_send_code_success(self, mock_redis, mock_mail):
-        """測試：成功將驗證碼存入 Redis 並透過 SMTP 發送 Email"""
+        """Test successful storage of OTP in Redis and dispatch via SMTP."""
         mock_redis.setex.return_value = True
         mock_mail.send.return_value = True
 
@@ -46,28 +46,26 @@ class TestAuthAPI:
         assert response.status_code == 200
         res_data = json.loads(response.data)
         assert res_data["message"] == "Verification code sent successfully"
-        
-        # 驗證 Redis 有確實呼叫 setex 且過期時間設為 300 秒
+
+        # Verify Redis setex is invoked with 300s TTL
         called_args, _ = mock_redis.setex.call_args
         assert called_args[0] == f"verify:{self.test_email}"
         assert called_args[1] == 300
 
-    # ====================================================================
-    # 2. 測試：使用者註冊 (POST /api/v1/auth/register)
-    # ====================================================================
+    # 2. User Registration (POST /api/v1/auth/register)
     @patch('app.models.user.UserModel.create_user')
     @patch('app.models.user.UserModel.get_by_email')
     @patch('app.routes.auth.redis_client')
     def test_register_success(self, mock_redis, mock_get_email, mock_create_user):
-        """測試：驗證碼正確且無重複 Email 時，成功註冊並簽發 JWT"""
-        # 模擬 Redis 裡面有正確的驗證碼
+        """Test successful registration and token issuance upon valid OTP verification."""
+        # Mock Redis returning matching OTP
         mock_redis.get.return_value = self.test_code
         mock_redis.delete.return_value = True
-        
-        # 模擬 Email 尚未被註冊過
+
+        # Mock unregistered email
         mock_get_email.return_value = None
-        
-        # 模擬資料庫寫入成功後的回傳用戶字典
+
+        # Mock database insertion returning user dict
         mock_create_user.return_value = {
             "id": 42,
             "username": self.test_username,
@@ -90,8 +88,8 @@ class TestAuthAPI:
 
     @patch('app.routes.auth.redis_client')
     def test_register_invalid_code(self, mock_redis):
-        """測試：當輸入錯誤或過期的驗證碼時，註冊應被攔截"""
-        # 模擬 Redis 內部的驗證碼與使用者輸入的不符
+        """Test registration rejection when an invalid or expired OTP is supplied."""
+        # Mock Redis returning non-matching OTP
         mock_redis.get.return_value = "999999"
 
         payload = {
@@ -106,21 +104,19 @@ class TestAuthAPI:
         res_data = json.loads(response.data)
         assert res_data["error"] == "Invalid or expired verification code"
 
-    # ====================================================================
-    # 3. 測試：使用者登入 (POST /api/v1/auth/login)
-    # ====================================================================
+    # 3. User Login (POST /api/v1/auth/login)
     @patch('app.models.user.UserModel.verify_password')
     @patch('app.models.user.UserModel.get_by_email')
     def test_login_success(self, mock_get_email, mock_verify):
-        """測試：輸入正確的帳密時，成功登入並取得 JWT"""
-        # 模擬資料庫查到該用戶
+        """Test successful authentication and token return with valid credentials."""
+        # Mock existing user record
         mock_get_email.return_value = {
             "id": 42,
             "username": self.test_username,
             "email": self.test_email,
             "password_hash": "mocked_hash_value"
         }
-        # 模擬密碼密鑰比對成功
+        # Mock valid password verification
         mock_verify.return_value = True
 
         payload = {"email": self.test_email, "password": self.test_password}
@@ -134,7 +130,7 @@ class TestAuthAPI:
 
     @patch('app.models.user.UserModel.get_by_email')
     def test_login_failed_user_not_found(self, mock_get_email):
-        """測試：當 Email 不存在於系統中時，返回 401 登入失敗"""
+        """Test authentication rejection (HTTP 401) when user email does not exist."""
         mock_get_email.return_value = None
 
         payload = {"email": "wrong@example.com", "password": self.test_password}
@@ -144,41 +140,36 @@ class TestAuthAPI:
         res_data = json.loads(response.data)
         assert "Invalid email or password" in res_data["error"]
 
-    # ====================================================================
-    # 4. 測試：個人 Profile 查詢 (GET /api/v1/auth/me)
-    # ====================================================================
+    # 4. User Profile Inspection (GET /api/v1/auth/me)
     def test_get_profile_success(self):
-        """測試：帶上合法 Token 請求個人資訊時，應能成功解析身份識別"""
+        """Test identity resolution from valid Bearer JWT header."""
         response = self.client.get(f"{self.base_url}/me", headers=self.headers)
-        
+
         assert response.status_code == 200
         res_data = json.loads(response.data)
         assert res_data["user_id"] == "42"
         assert res_data["status"] == "authenticated"
 
-    # ====================================================================
-    # 5. 測試：使用者登出與黑名單廢棄 (POST /api/v1/auth/logout)
-    # ====================================================================
+    # 5. User Logout & Token Revocation (POST /api/v1/auth/logout)
     @patch('app.routes.auth.redis_client')
     def test_logout_success(self, mock_redis):
-        """測試：帶上合法 Token 請求登出時，系統應計算 Token 剩餘壽命並成功將 JTI 寫入 Redis 黑名單"""
-        # 模擬 Redis 的 setex 操作成功
+        """Test token revocation by calculating remaining TTL and storing JTI in Redis blocklist."""
+        # Mock successful Redis setex operation
         mock_redis.setex.return_value = True
 
-        # 發送登出請求（使用 setup_method 中生成的 self.headers）
+        # Dispatch logout request using authorized headers
         response = self.client.post(f"{self.base_url}/logout", headers=self.headers)
 
-        # 1. 驗證回應狀態碼與內容
+        # Verify response status code and payload structure
         assert response.status_code == 200
         res_data = json.loads(response.data)
         assert res_data["status"] == "success"
         assert "Successfully logged out" in res_data["message"]
 
-        # 2. 驗證 Controller 內部是否有正確呼叫 redis_client.setex
+        # Assert Redis blocklist invocation
         assert mock_redis.setex.called
         called_args, _ = mock_redis.setex.call_args
-        
-        # 檢查寫入 Redis 的 Key 格式是否為 blacklist:<jti>
+
+        # Ensure key structure follows blacklist:<jti> format and is marked as revoked
         assert called_args[0].startswith("blacklist:")
-        # 檢查存入的值是否為被廢棄的標記值 "revoked"
         assert called_args[2] == "revoked"

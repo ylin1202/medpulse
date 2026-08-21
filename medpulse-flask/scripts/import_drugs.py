@@ -1,24 +1,25 @@
 import json
-import psycopg2
-from psycopg2.extras import execute_values
 import os
 from dotenv import load_dotenv
+import psycopg2
+from psycopg2.extras import execute_values
 
-# 載入環境變數
+# Load environment variables
 load_dotenv()
 
+
 def extract_drug_data(item):
-    """清理並抽取單筆 OpenFDA 藥品 JSON 資料"""
+    """Clean and extract a single OpenFDA drug JSON record."""
     openfda = item.get("openfda", {})
     
-    # 取出陣列中的第一項作為字串
+    # Extract the first element from arrays as a single string
     brand_name = openfda.get("brand_name", [None])[0]
     generic_name = openfda.get("generic_name", [None])[0]
     manufacturer = openfda.get("manufacturer_name", [None])[0]
     product_type = openfda.get("product_type", [None])[0]
     route = openfda.get("route", [None])[0]
 
-    # 合併文字陣列為段落
+    # Join multiline text arrays into paragraphs
     active_ingredient = "\n".join(item.get("active_ingredient", [])) or None
     purpose = "\n".join(item.get("purpose", [])) or None
     indications = "\n".join(item.get("indications_and_usage", [])) or None
@@ -39,21 +40,22 @@ def extract_drug_data(item):
         warnings,
         do_not_use,
         boxed_warning,
-        json.dumps(openfda) # 轉為 JSONB 儲存
+        json.dumps(openfda)  # Store as JSONB
     )
 
+
 def import_json_to_db(json_file_path):
-    """讀取 JSON 並匯入 PostgreSQL"""
+    """Parse JSON dataset and perform batch ingestion into PostgreSQL."""
     conn = psycopg2.connect(
         host=os.getenv("DB_HOST", "localhost"),
         port=os.getenv("DB_PORT", 5432),
         dbname=os.getenv("DB_NAME", "med_db"),
-        user=os.getenv("DB_USER", "yilin"),
+        user=os.getenv("DB_USER", "postgres"),
         password=os.getenv("DB_PASSWORD", "")
     )
     cursor = conn.cursor()
 
-    # 1. 自動建表與加強防呆約束
+    # Create table schema, constraints, and indexes idempotently
     create_table_sql = """
     CREATE TABLE IF NOT EXISTS drugs (
         id SERIAL PRIMARY KEY,
@@ -73,7 +75,7 @@ def import_json_to_db(json_file_path):
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
-    -- 安全加入 UNIQUE Constraint (若已存在則忽略)
+    -- Ensure unique constraint on openfda_id safely
     DO $$
     BEGIN
         IF NOT EXISTS (
@@ -89,14 +91,14 @@ def import_json_to_db(json_file_path):
     """
     cursor.execute(create_table_sql)
 
-    # 2. 讀取 JSON 檔案
+    # Load JSON source file
     with open(json_file_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
     results = data.get("results", [])
-    print(f"準備匯入 {len(results)} 筆藥品資料...")
+    print(f"Preparing to import {len(results)} drug records...")
 
-    # 3. 批次寫入 (id 自動由 1 開始算起)
+    # Batch insert with conflict avoidance on unique OpenFDA IDs
     insert_sql = """
     INSERT INTO drugs (
         openfda_id, brand_name, generic_name, manufacturer_name, product_type, route,
@@ -110,10 +112,11 @@ def import_json_to_db(json_file_path):
     execute_values(cursor, insert_sql, drug_records)
     conn.commit()
 
-    print(f"成功匯入 {len(drug_records)} 筆藥品資料至 'drugs' 資料表！")
+    print(f"Successfully imported {len(drug_records)} drug records into 'drugs' table.")
 
     cursor.close()
     conn.close()
+
 
 if __name__ == "__main__":
     CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))

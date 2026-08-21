@@ -11,7 +11,7 @@ from app.utils.cache import CacheService
 from app.models.user import UserModel
 from app.models.favorite import FavoriteModel
 
-# 引入路由藍圖
+# Import route blueprints
 from app.routes.auth import auth_bp
 from app.routes.fact_check import fact_check_bp
 from app.routes.drug import drug_bp
@@ -20,39 +20,40 @@ from app.routes.pharmacy import pharmacy_bp
 
 
 def create_app():
+    """Application factory for configuring and initializing the Flask application."""
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    # 開啟 JWT 黑名單檢查功能
+    # Enable JWT blocklist verification
     app.config["JWT_BLACKLIST_ENABLED"] = True
     app.config["JWT_BLACKLIST_TOKEN_CHECKS"] = ["access", "refresh"]
 
-    # 允許跨域請求
+    # Enable Cross-Origin Resource Sharing (CORS)
     CORS(app)
 
-    # 初始化 JWTManager
+    # Initialize JWT manager
     jwt = JWTManager(app)
     
-    # 初始化 Flask-Mail (會去讀 app.config['MAIL_SERVER'] 等設定)
+    # Initialize Flask-Mail for SMTP communication
     mail.init_app(app)
 
-    # 註冊流量限制器
+    # Register distributed rate limiter
     limiter.init_app(app)
 
-    # 初始化 DB 連線池
+    # Initialize PostgreSQL connection pool
     Database.init_pool(app)
 
-    # 每個請求結束後自動釋放連線還給連線池
+    # Release database connection back to the pool upon request teardown
     app.teardown_appcontext(Database.release_conn)
 
-    # 註冊路由藍圖
+    # Register routing blueprints
     app.register_blueprint(auth_bp)
     app.register_blueprint(fact_check_bp)
     app.register_blueprint(drug_bp)
     app.register_blueprint(favorite_bp)
     app.register_blueprint(pharmacy_bp)
     
-    # 健康檢查 API
+    # Health check endpoint
     @app.route("/health", methods=["GET"])
     def health_check():
         return jsonify({
@@ -61,7 +62,7 @@ def create_app():
             "version": "1.0.0"
         }), 200
 
-    # 啟動時自動檢查並建立關聯資料表
+    # Auto-initialize database tables on application bootstrap
     with app.app_context():
         try:
             UserModel.create_table()
@@ -70,7 +71,7 @@ def create_app():
         except Exception as e:
             print(f"Database initialization skipped or failed: {e}")
     
-    # 自訂 429 流量超限錯誤回應
+    # Custom error handler for HTTP 429 Too Many Requests
     @app.errorhandler(RateLimitExceeded)
     def ratelimit_handler(e):
         return jsonify({
@@ -79,28 +80,28 @@ def create_app():
             "message": f"You have exceeded your request limit. Please try again later. Details: {e.description}"
         }), 429
 
-    # 註冊 JWT 黑名單（Blocklist）檢查回呼函式
+    # JWT blocklist verification callback
     @jwt.token_in_blocklist_loader
     def check_if_token_is_revoked(jwt_header, jwt_payload: dict):
         """
-        每當有需要驗證的請求（帶有 @jwt_required()）進來時，
-        Flask-JWT-Extended 會自動呼叫此處，檢查這把鑰匙是否已被黑名單廢棄。
+        Callback invoked by Flask-JWT-Extended on protected endpoints (@jwt_required())
+        to verify whether the given JWT has been revoked/blacklisted.
         """
         try:
-            # 取得該 JWT 的唯一識別碼 (JWT ID)
+            # Extract unique JWT identifier (JTI)
             jti = jwt_payload["jti"]
             
-            # 取得共用的 Redis 連線實例
+            # Obtain shared Redis client instance
             redis_client = CacheService.get_client()
             
-            # 查詢 Redis 中是否存在此 jti 的黑名單紀錄
+            # Check for revoked token presence in Redis
             token_in_redis = redis_client.get(f"blacklist:{jti}")
             
-            # 若存在代表使用者已主動登出，回傳 True 阻斷連線
+            # Return True to deny access if token exists in blocklist
             return token_in_redis is not None
             
         except Exception:
-            # 防禦性降級：若 Redis 連線異常，預設回傳 False 放行以避免影響正常業務（亦可依資安策略改為 True 嚴格攔截）
+            # Defensive fallback: allow request if Redis lookup fails to preserve system availability
             return False
 
     return app

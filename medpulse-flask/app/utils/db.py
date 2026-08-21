@@ -1,15 +1,15 @@
-import psycopg2
-from psycopg2.pool import SimpleConnectionPool
-from psycopg2.extras import RealDictCursor
 from flask import g
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from psycopg2.pool import SimpleConnectionPool
+
 
 class Database:
-    """封裝 psycopg2 連線池管理 Class"""
     _pool = None
 
     @classmethod
     def init_pool(cls, app):
-        """初始化連線池"""
+        """Initialize the SimpleConnectionPool with application configuration credentials."""
         if cls._pool is None:
             cls._pool = SimpleConnectionPool(
                 minconn=1,
@@ -23,21 +23,24 @@ class Database:
 
     @classmethod
     def get_conn(cls):
-        """從連線池取得連線"""
+        """Acquire a thread-safe connection from the connection pool and bind it to Flask's request context."""
         if "db_conn" not in g:
             g.db_conn = cls._pool.getconn()
         return g.db_conn
 
     @classmethod
     def release_conn(cls, exception=None):
-        """請求結束時釋放連線還給連線池"""
+        """Return the context-bound connection back to the connection pool upon request completion."""
         conn = g.pop("db_conn", None)
         if conn is not None and cls._pool is not None:
             cls._pool.putconn(conn)
 
     @classmethod
     def execute_query(cls, query, params=None, fetchone=False, fetchall=False, commit=False):
-        """通用 SQL 執行函式，回傳 RealDict 格式 (類似 Dict/JSON)"""
+        """
+        Execute raw SQL queries with automatic cursor management, dictionary serialization, and rollback safety.
+        Returns records as RealDict objects (dict-like key-value structures).
+        """
         conn = cls.get_conn()
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cursor:
@@ -55,5 +58,5 @@ class Database:
                 return result
         except Exception as e:
             if commit:
-                conn.rollback()  # 發生例外時自動 Rollback，避免連線處於 InFailedSqlTransaction
+                conn.rollback()  # Automatically rollback transactions on error to prevent InFailedSqlTransaction states
             raise e

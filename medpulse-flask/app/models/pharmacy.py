@@ -1,12 +1,13 @@
 from app.utils.db import Database
 
+
 class PharmacyModel:
-    """健保藥局資料庫操作 Class"""
+    """Data Access Object (DAO) for querying contracted pharmacy records and geolocation data."""
 
     @staticmethod
     def get_all(keyword=None, city=None):
         """
-        取得所有藥局清單 (不分頁，支援關鍵字搜尋與縣市篩選)
+        Retrieve a list of pharmacies supporting keyword search and administrative city filtering.
         """
         params = []
         conditions = []
@@ -16,13 +17,13 @@ class PharmacyModel:
             FROM pharmacies
         """
 
-        # 關鍵字搜尋 (藥局名稱或地址)
+        # Keyword search (matches pharmacy name or physical address)
         if keyword:
             conditions.append("(name ILIKE %s OR address ILIKE %s)")
             pattern = f"%{keyword}%"
             params.extend([pattern, pattern])
 
-        # 按縣市篩選 (例如：臺北市)
+        # Filter by administrative region/city (e.g., Taipei City)
         if city:
             conditions.append("city = %s")
             params.append(city)
