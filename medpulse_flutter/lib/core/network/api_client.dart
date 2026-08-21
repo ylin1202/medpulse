@@ -14,8 +14,8 @@ class ApiClient {
     flaskDio = Dio(
       BaseOptions(
         baseUrl: '',
-        connectTimeout: const Duration(seconds: 10),
-        receiveTimeout: const Duration(seconds: 10),
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 15),
         headers: {'Content-Type': 'application/json'},
       ),
     );
@@ -42,12 +42,13 @@ class ApiClient {
       ),
     );
 
-    // 2. 初始化 FastAPI Dio
+    // 2. 初始化 FastAPI Dio (給予 AI 生成足夠的逾時時間)
     fastApiDio = Dio(
       BaseOptions(
         baseUrl: '',
-        connectTimeout: const Duration(seconds: 10),
-        receiveTimeout: const Duration(seconds: 15),
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 60), // 從 15 秒調整至 60 秒
+        sendTimeout: const Duration(seconds: 30),
         headers: {'Content-Type': 'application/json'},
       ),
     );
