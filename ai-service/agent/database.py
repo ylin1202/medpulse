@@ -1,6 +1,8 @@
 from typing import Any, Dict, List, Optional
 import asyncpg
 
+from app.core.logging import logger
+
 
 async def query_medical_metrics_async(
     metrics_list: List[str], 
@@ -48,7 +50,7 @@ async def query_medical_metrics_async(
                     "definition": row["metric_definition"]
                 }
     except Exception as e:
-        print(f"[PostgreSQL Async RAG Error]: {e}")
+        logger.error("[PostgreSQL Async RAG Error] Failed to query medical metrics: %s", e, exc_info=True)
         return {}
 
     return results
@@ -112,6 +114,6 @@ async def hybrid_search_fallback_async(
                     "rrf_score": float(row["rrf_score"])
                 })
     except Exception as e:
-        print(f"[Hybrid Search Error]: {e}")
+        logger.error("[Hybrid Search Error] Failed executing hybrid search fallback for query '%s': %s", query_text, e, exc_info=True)
 
     return results
