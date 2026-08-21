@@ -11,3 +11,4 @@ llama_cpp_python
 torch
 transformers
 numpy
+google-genai

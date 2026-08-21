@@ -1,0 +1,44 @@
+# Environment & Secrets
+.env
+*.env
+.env.local
+.env.*.local
+
+# Virtual Env & Bytecode
+.venv/
+venv/
+ENV/
+env/
+
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Large Model Artifacts
+*.gguf
+*.bin
+*.pt
+*.safetensors
+model_cache/
+hf_cache/
+
+# Datasets & Local DB Data
+*.csv.gz
+*.parquet
+pgdata/
+
+# Testing, Coverage & Logs
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# IDE & OS Specifics
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.bek
