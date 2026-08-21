@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-// 匯入地圖與藥物搜尋頁面
 import 'map/presentation/pharmacy_map_screen.dart';
 import 'drug/presentation/drug_search_screen.dart';
 import 'fact_check/presentation/fact_check_screen.dart';
 import 'lab_metric/presentation/lab_metric_screen.dart';
 import 'profile/presentation/profile_screen.dart';
 
-/// 應用程式底部導覽列 (Bottom Navigation) 主頁面
+/// Primary root screen managing multi-tab bottom navigation
+/// and persistent view state preservation via [IndexedStack].
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
 
@@ -18,7 +18,6 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
 
-  // 5 個核心 Tab 頁面清單 
   late final List<Widget> _screens = [
     const FactCheckScreen(),
     const PharmacyMapScreen(),
@@ -78,7 +77,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
-/// 佔位用的通用子頁面 UI Component (全英文介面)
+/// Fallback scaffold component rendered for staging or unlinked modules.
 class _PlaceholderScreen extends StatelessWidget {
   final String title;
   final IconData icon;

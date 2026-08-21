@@ -1,13 +1,12 @@
-/// 藥品資料模型
 class DrugModel {
   final String id;
-  final String brandName; // 商品名
-  final String genericName; // 通用名/學名
-  final String manufacturer; // 製造商
-  final String indications; // 適應症/用途
-  final String dosage; // 用法用量
-  final String warnings; // 警示與禁忌
-  final String adverseReactions; // 副作用
+  final String brandName; // Proprietary/trade name
+  final String genericName; // International Nonproprietary Name (INN) / chemical name
+  final String manufacturer; // Marketing authorization holder or pharmaceutical manufacturer
+  final String indications; // Approved clinical indications and therapeutic usage
+  final String dosage; // Recommended dosage and administration guidelines
+  final String warnings; // Boxed warnings, contraindications, and clinical precautions
+  final String adverseReactions; // Documented adverse drug reactions and side effects
 
   DrugModel({
     required this.id,
@@ -20,7 +19,7 @@ class DrugModel {
     required this.adverseReactions,
   });
 
-  /// 輔助函式：安全解析可能是 String 或 List<dynamic> 的 JSON 欄位
+  /// Helper parsing dynamic fields that may appear as raw strings or serialized arrays.
   static String _parseField(
     dynamic rawValue, {
     String defaultValue = 'No information provided.',
@@ -41,22 +40,22 @@ class DrugModel {
   }
 
   factory DrugModel.fromJson(Map<String, dynamic> json) {
-    // 考慮 openfda 巢狀結構與展平結構
+    // Handle nested OpenFDA metadata structure with fallback to flat schemas
     final openfda = json['openfda'] as Map<String, dynamic>? ?? {};
 
-    // 1. Brand Name
+    // 1. Proprietary Brand Name
     String brand = _parseField(json['brand_name'], defaultValue: '');
     if (brand == 'No information provided.' || brand.isEmpty) {
       brand = _parseField(openfda['brand_name'], defaultValue: 'Unknown Brand');
     }
 
-    // 2. Generic Name
+    // 2. Generic / Chemical Name
     String generic = _parseField(json['generic_name'], defaultValue: '');
     if (generic == 'No information provided.' || generic.isEmpty) {
       generic = _parseField(openfda['generic_name'], defaultValue: 'N/A');
     }
 
-    // 3. Manufacturer
+    // 3. Manufacturer Name
     String mfr = _parseField(json['manufacturer_name'], defaultValue: '');
     if (mfr == 'No information provided.' || mfr.isEmpty) {
       mfr = _parseField(

@@ -18,24 +18,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    // 1. 監聽全域登入狀態：一旦在藥物頁或任何地方登入/登出，立刻刷新 Profile 頁面
+    // Attach listener to global authentication state for reactive UI updates
     AuthService.authState.addListener(_onAuthStatusChanged);
     _checkAuthStatus();
   }
 
   @override
   void dispose() {
-    // 2. 銷毀時移除監聽，避免記憶體洩漏
+    // Purge listener on teardown to prevent memory leaks
     AuthService.authState.removeListener(_onAuthStatusChanged);
     super.dispose();
   }
 
-  /// 當全域登入狀態改變時觸發
+  /// Triggered whenever the global authentication state transitions
   void _onAuthStatusChanged() {
     _checkAuthStatus();
   }
 
-  /// 檢查本地登入狀態並更新 Profile 資訊
+  /// Query local session storage and update authenticated user state
   Future<void> _checkAuthStatus() async {
     final loggedIn = await AuthService().isLoggedIn();
     if (loggedIn) {
@@ -58,7 +58,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // 開啟 Auth 對話框
+  /// Present authentication modal dialog
   void _openAuthModal() {
     showDialog(
       context: context,
@@ -84,11 +84,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. 使用者個人名片 / 登入引導卡片
+            // 1. User profile card / Sign-in prompt banner
             _buildUserHeaderCard(),
             const SizedBox(height: 24),
 
-            // 2. 收藏與歷史紀錄區塊 (需登入)
+            // 2. Authenticated user features section
             const Text(
               'Personal Features',
               style: TextStyle(
@@ -115,21 +115,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 }
               },
             ),
-            // _buildFeatureTile(
-            //   icon: Icons.history_rounded,
-            //   title: 'Search & Analysis History',
-            //   subtitle: 'Recent queries and clinical analysis logs',
-            //   onTap: () {
-            //     if (!_isLoggedIn) {
-            //       _showLoginRequiredDialog();
-            //     } else {
-            //       // TODO: 開啟歷史紀錄
-            //     }
-            //   },
-            // ),
             const SizedBox(height: 24),
 
-            // 3. 系統資訊與免責聲明 (無需登入即可查看)
+            // 3. System information and legal disclaimers
             const Text(
               'About & System',
               style: TextStyle(
@@ -165,14 +153,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 30),
 
-            // 4. 登出按鈕
+            // 4. Sign-out action button
             if (_isLoggedIn)
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   onPressed: () async {
-                    await AuthService()
-                        .logout(); // 執行完 logout 後，authState 的廣播會自動將 _isLoggedIn 刷為 false
+                    await AuthService().logout();
                   },
                   icon: const Icon(Icons.logout_rounded, color: Colors.red),
                   label: const Text(
@@ -443,7 +430,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         content: const SingleChildScrollView(
           child: Text(
             '1. Educational Purpose Only: MedPulse is designed strictly for informational and educational purposes.\n\n'
-            '2. Not Professional Medical Advice: Lab metric search results, drug information, and fact-checking data in this app do NOT constitute medical advice, diagnosis, or treatment.\n\n' // 👈 已修改
+            '2. Not Professional Medical Advice: Lab metric search results, drug information, and fact-checking data in this app do NOT constitute medical advice, diagnosis, or treatment.\n\n'
             '3. Consult Professionals: Always seek the advice of a qualified healthcare provider for any questions regarding a medical condition.',
             style: TextStyle(fontSize: 13, height: 1.5),
           ),

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
+/// Modal dialog displaying detailed RAG fact-checking results
 class FactCheckRAGDialog extends StatelessWidget {
   final Map<String, dynamic> item;
 
-  const FactCheckRAGDialog({Key? key, required this.item}) : super(key: key);
+  const FactCheckRAGDialog({super.key, required this.item});
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +23,7 @@ class FactCheckRAGDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 頂部標籤與關閉按鈕
+              // Header row: Status verdict badge and close button
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -48,7 +49,7 @@ class FactCheckRAGDialog extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               
-              // 匹配的宣稱標題（Markdown 渲染）
+              // Verified claim title (Markdown formatted)
               MarkdownBody(
                 data: claimText,
                 selectable: true,
@@ -67,30 +68,42 @@ class FactCheckRAGDialog extends StatelessWidget {
               ),
               const Divider(height: 24),
 
-              // Gemini 生成的闢謠解釋標題
+              // Evidentiary fact-check explanation header
               const Text(
                 'AI Fact-Check Explanation:',
-                style: TextStyle(fontWeight: FontWeight.w600, color: Colors.blueGrey),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.blueGrey,
+                ),
               ),
               const SizedBox(height: 8),
 
-              // Gemini 生成內容（Markdown 渲染）
+              // Synthesized fact-check body (Markdown formatted)
               MarkdownBody(
                 data: explanationText,
                 selectable: true,
                 styleSheet: MarkdownStyleSheet(
-                  p: const TextStyle(fontSize: 15, height: 1.5, color: Colors.black87),
-                  strong: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
+                  p: const TextStyle(
+                    fontSize: 15,
+                    height: 1.5,
+                    color: Colors.black87,
+                  ),
+                  strong: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
 
-              // 底部關閉按鈕
+              // Dismiss action button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                   onPressed: () => Navigator.of(context).pop(),
                   child: const Text('Close'),

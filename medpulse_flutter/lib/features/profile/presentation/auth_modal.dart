@@ -15,7 +15,7 @@ class _AuthModalState extends State<AuthModal> {
   bool _isLoginMode = true;
   bool _isLoading = false;
 
-  // 倒數計時器相關變數
+  // Rate-limiting countdown timer variables
   int _countdownSeconds = 0;
   Timer? _timer;
 
@@ -23,15 +23,19 @@ class _AuthModalState extends State<AuthModal> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _codeController = TextEditingController(); // 👈 驗證碼 Controller
+  final TextEditingController _codeController = TextEditingController();
 
   @override
   void dispose() {
     _timer?.cancel();
+    _usernameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _codeController.dispose();
     super.dispose();
   }
 
-  /// 開始 60 秒倒數
+  /// Initialize 60-second rate-limiting countdown for OTP dispatch
   void _startCountdown() {
     setState(() => _countdownSeconds = 60);
     _timer?.cancel();
@@ -44,12 +48,12 @@ class _AuthModalState extends State<AuthModal> {
     });
   }
 
-  /// 發送驗證碼事件
+  /// Request email verification code dispatch
   Future<void> _sendCode() async {
     final email = _emailController.text.trim();
     if (email.isEmpty || !email.contains('@')) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid email address first')),
+        const SnackBar(content: Text('Please enter a valid email address first.')),
       );
       return;
     }
@@ -61,14 +65,14 @@ class _AuthModalState extends State<AuthModal> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result['message'] ?? 'Sending code...'),
+          content: Text(result['message'] ?? 'Sending verification code...'),
           backgroundColor: result['success'] ? const Color(0xFF00796B) : Colors.red,
         ),
       );
     }
   }
 
-  /// 提交註冊 / 登入
+  /// Submit authentication form payload (Sign In or Registration)
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -86,7 +90,7 @@ class _AuthModalState extends State<AuthModal> {
         username: _usernameController.text.trim(),
         email: _emailController.text.trim(),
         password: _passwordController.text,
-        code: _codeController.text.trim(), // 👈 傳送驗證碼
+        code: _codeController.text.trim(),
       );
     }
 
@@ -98,14 +102,14 @@ class _AuthModalState extends State<AuthModal> {
         widget.onAuthSuccess();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(_isLoginMode ? 'Welcome back!' : 'Registered successfully!'),
+            content: Text(_isLoginMode ? 'Welcome back!' : 'Account registered successfully!'),
             backgroundColor: const Color(0xFF00796B),
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['message'] ?? 'Authentication failed'),
+            content: Text(result['message'] ?? 'Authentication failed.'),
             backgroundColor: Colors.red[600],
           ),
         );
@@ -126,13 +130,17 @@ class _AuthModalState extends State<AuthModal> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 標題
+                // Header row with title and dismiss action
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       _isLoginMode ? 'Sign In' : 'Create Account',
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF004D40)),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF004D40),
+                      ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.close),
@@ -142,7 +150,7 @@ class _AuthModalState extends State<AuthModal> {
                 ),
                 const SizedBox(height: 16),
 
-                // 註冊時顯示 Username
+                // Username input field (Registration mode only)
                 if (!_isLoginMode) ...[
                   TextFormField(
                     controller: _usernameController,
@@ -156,12 +164,12 @@ class _AuthModalState extends State<AuthModal> {
                   const SizedBox(height: 12),
                 ],
 
-                // Email 輸入框
+                // Email address input field
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    labelText: 'Email',
+                    labelText: 'Email Address',
                     prefixIcon: const Icon(Icons.email_outlined),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
@@ -169,7 +177,7 @@ class _AuthModalState extends State<AuthModal> {
                 ),
                 const SizedBox(height: 12),
 
-                // 註冊模式時顯示：驗證碼欄位 + 發送按鈕
+                // OTP verification code input & trigger button (Registration mode only)
                 if (!_isLoginMode) ...[
                   Row(
                     children: [
@@ -178,11 +186,11 @@ class _AuthModalState extends State<AuthModal> {
                           controller: _codeController,
                           keyboardType: TextInputType.number,
                           decoration: InputDecoration(
-                            labelText: 'Code',
+                            labelText: 'Verification Code',
                             prefixIcon: const Icon(Icons.shield_outlined),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                           ),
-                          validator: (v) => v == null || v.length != 6 ? '6-digit code' : null,
+                          validator: (v) => v == null || v.length != 6 ? 'Enter 6-digit code' : null,
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -196,7 +204,10 @@ class _AuthModalState extends State<AuthModal> {
                           ),
                           child: Text(
                             _countdownSeconds > 0 ? '${_countdownSeconds}s' : 'Send Code',
-                            style: const TextStyle(color: Color(0xFF00796B), fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                              color: Color(0xFF00796B),
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
@@ -205,7 +216,7 @@ class _AuthModalState extends State<AuthModal> {
                   const SizedBox(height: 12),
                 ],
 
-                // 密碼輸入框
+                // Password input field
                 TextFormField(
                   controller: _passwordController,
                   obscureText: true,
@@ -218,7 +229,7 @@ class _AuthModalState extends State<AuthModal> {
                 ),
                 const SizedBox(height: 20),
 
-                // 提交按鈕
+                // Submit action button
                 SizedBox(
                   width: double.infinity,
                   height: 48,
@@ -231,12 +242,15 @@ class _AuthModalState extends State<AuthModal> {
                     ),
                     child: _isLoading
                         ? const CircularProgressIndicator(color: Colors.white)
-                        : Text(_isLoginMode ? 'Log In' : 'Register', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        : Text(
+                            _isLoginMode ? 'Log In' : 'Register',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 12),
 
-                // 切換 登入 / 註冊 模式
+                // Mode toggle button (Sign In <-> Sign Up)
                 Center(
                   child: TextButton(
                     onPressed: () {
@@ -246,7 +260,10 @@ class _AuthModalState extends State<AuthModal> {
                     },
                     child: Text(
                       _isLoginMode ? "Don't have an account? Sign Up" : "Already have an account? Log In",
-                      style: const TextStyle(color: Color(0xFF00796B), fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        color: Color(0xFF00796B),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),

@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../data/fact_check_model.dart';
 
+
 class FactCheckDetailScreen extends StatelessWidget {
   final FactCheckModel factCheck;
-  final String? aiSummary; // 僅從彈窗按鈕點進來時傳入
+  final String? aiSummary; // Injected when navigated from modal dialogs
 
   const FactCheckDetailScreen({
     super.key,
@@ -14,11 +15,11 @@ class FactCheckDetailScreen extends StatelessWidget {
 
   Color _getVerdictColor(String verdict) {
     final v = verdict.toLowerCase();
-    if (v.contains('false') || v.contains('謠言') || v.contains('不實')) {
+    if (v.contains('false') || v.contains('untrue') || v.contains('misleading')) {
       return const Color(0xFFE57373);
-    } else if (v.contains('true') || v.contains('真實') || v.contains('正確')) {
+    } else if (v.contains('true') || v.contains('correct') || v.contains('verified')) {
       return const Color(0xFF81C784);
-    } else if (v.contains('mix') || v.contains('partial') || v.contains('部分')) {
+    } else if (v.contains('mix') || v.contains('partial') || v.contains('unproven')) {
       return const Color(0xFFFFB74D);
     }
     return Colors.blueGrey[400]!;
@@ -26,11 +27,11 @@ class FactCheckDetailScreen extends StatelessWidget {
 
   IconData _getVerdictIcon(String verdict) {
     final v = verdict.toLowerCase();
-    if (v.contains('false') || v.contains('謠言') || v.contains('不實')) {
+    if (v.contains('false') || v.contains('untrue') || v.contains('misleading')) {
       return Icons.cancel_rounded;
-    } else if (v.contains('true') || v.contains('真實') || v.contains('正確')) {
+    } else if (v.contains('true') || v.contains('correct') || v.contains('verified')) {
       return Icons.check_circle_rounded;
-    } else if (v.contains('mix') || v.contains('partial') || v.contains('部分')) {
+    } else if (v.contains('mix') || v.contains('partial') || v.contains('unproven')) {
       return Icons.published_with_changes_rounded;
     }
     return Icons.help_outline_rounded;
@@ -46,7 +47,7 @@ class FactCheckDetailScreen extends StatelessWidget {
             ? factCheck.originalExplanation.trim()
             : (factCheck.summary.trim().isNotEmpty
                 ? factCheck.summary.trim()
-                : 'No original text available.');
+                : 'No original literature available.');
 
     final String sourceText = factCheck.source.trim();
     final bool hasSource =
@@ -70,7 +71,7 @@ class FactCheckDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. 頂部 Verdict 卡片
+            // 1. Header verdict banner card
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -160,7 +161,7 @@ class FactCheckDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // 2. 只有從彈窗 Dialog 進入時才顯示的 AI 生成區塊 (支援 Markdown 解析)
+            // 2. AI-synthesized contextual summary section (Markdown enabled)
             if (aiSummary != null && aiSummary!.trim().isNotEmpty) ...[
               Row(
                 children: [
@@ -220,7 +221,7 @@ class FactCheckDetailScreen extends StatelessWidget {
               const SizedBox(height: 24),
             ],
 
-            // 3. 原始醫學文獻卡片 (支援 Markdown 解析)
+            // 3. Canonical medical evidence & literature report (Markdown enabled)
             Row(
               children: [
                 Container(
@@ -286,7 +287,7 @@ class FactCheckDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // 4. 來源卡片
+            // 4. Citation and provenance source card
             Container(
               padding: const EdgeInsets.all(16.0),
               decoration: BoxDecoration(

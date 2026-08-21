@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-// 可跨頁面重用的通用底部分頁控制元件
 class PaginationBar extends StatelessWidget {
   final int currentPage;
   final int totalPages;
@@ -15,7 +14,7 @@ class PaginationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 頁數小於等於 1 頁時自動隱藏
+    // Automatically hide controls when content fits within a single page
     if (totalPages <= 1) return const SizedBox.shrink();
 
     return Container(
@@ -33,7 +32,7 @@ class PaginationBar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // 上一頁按鈕
+          // Previous page button
           IconButton(
             icon: const Icon(Icons.arrow_back_ios, size: 15),
             onPressed: currentPage > 1
@@ -42,7 +41,7 @@ class PaginationBar extends StatelessWidget {
           ),
           const SizedBox(width: 8),
 
-          // 頁碼文字
+          // Page indicator label
           Text(
             'Page $currentPage of $totalPages',
             style: const TextStyle(
@@ -53,7 +52,7 @@ class PaginationBar extends StatelessWidget {
           ),
           const SizedBox(width: 8),
 
-          // 下一頁按鈕
+          // Next page button
           IconButton(
             icon: const Icon(Icons.arrow_forward_ios, size: 15),
             onPressed: currentPage < totalPages

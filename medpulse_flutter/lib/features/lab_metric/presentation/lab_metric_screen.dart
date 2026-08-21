@@ -18,17 +18,17 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
   AnalysisResponseModel? _analysisResult;
   String? _errorMessage;
 
-  // 預設快速病歷範例
+  // Pre-configured clinical note samples for prompt evaluation
   final List<String> _sampleNotes = [
     "Patient was brought to the ER with high fever. Urgent lab tests requested for Glucose, White Blood Cells, and Potassium.",
     "Patient with chronic fatigue. Lab test requested for Hemoglobin and Red Blood Cells.",
   ];
 
-  /// 呼叫 FastAPI 臨床病歷分析端點 (POST /api/v1/analyze)
+  /// Dispatches unstructured clinical text to FastAPI reasoning endpoint (POST /api/v1/analyze).
   Future<void> _analyzeClinicalText(String text) async {
     if (text.trim().isEmpty) return;
 
-    FocusScope.of(context).unfocus(); // 自動收起鍵盤
+    FocusScope.of(context).unfocus(); // Dismiss active soft keyboard
 
     setState(() {
       _isLoading = true;
@@ -36,13 +36,13 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
     });
 
     try {
-      debugPrint('[AI Agent] Sending clinical text to FastAPI /api/v1/analyze');
+      debugPrint('[AI Agent] Dispatching clinical payload to FastAPI /api/v1/analyze');
 
       final response = await ApiClient().fastApiDio.post(
         '/api/v1/analyze',
         data: {'clinical_text': text.trim()},
         options: Options(
-          receiveTimeout: const Duration(seconds: 90), // 明確配置 90 秒逾時
+          receiveTimeout: const Duration(seconds: 90),
           sendTimeout: const Duration(seconds: 30),
         ),
       );
@@ -108,7 +108,7 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. 頂部英雄卡片 (Hero Header Banner)
+            // 1. Clinical Analysis Hero Card
             Container(
               padding: const EdgeInsets.all(16.0),
               decoration: BoxDecoration(
@@ -129,7 +129,7 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 主題膠囊 Icon
+                      // Themed Icon Badge
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -144,7 +144,7 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
                       ),
                       const SizedBox(width: 14),
 
-                      // 標題與模型標籤
+                      // Title and Model Capability Tag
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -184,7 +184,7 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
                   ),
                   const SizedBox(height: 14),
 
-                  // 病歷輸入框
+                  // Clinical text input field
                   TextField(
                     controller: _clinicalTextController,
                     maxLines: 3,
@@ -218,7 +218,7 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Quick Sample Prompts
+                  // Quick Sample Prompt Chips
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
@@ -268,7 +268,7 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
                   ),
                   const SizedBox(height: 14),
 
-                  // 分析按鈕
+                  // Execute Analysis Button
                   SizedBox(
                     width: double.infinity,
                     height: 44,
@@ -298,7 +298,7 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
             ),
             const SizedBox(height: 18),
 
-            // 2. 載入狀態 Card
+            // 2. Loading State Card
             if (_isLoading)
               Container(
                 width: double.infinity,
@@ -324,17 +324,12 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
                           fontSize: 14,
                         ),
                       ),
-                      SizedBox(height: 4),
-                      Text(
-                        'NER Extraction -> Vector Retrieval -> Clinical Synthesis',
-                        style: TextStyle(color: Colors.grey, fontSize: 12),
-                      ),
                     ],
                   ),
                 ),
               ),
 
-            // 3. 錯誤訊息提示
+            // 3. Error Alert Banner
             if (_errorMessage != null)
               Container(
                 padding: const EdgeInsets.all(14),
@@ -357,11 +352,9 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
                 ),
               ),
 
-            // 4. 分析結果展示面板
+            // 4. Clinical Results Panel
             if (_analysisResult != null && !_isLoading) ...[
-              // =======================================================
-              // 【RAG G 階段】AI Clinical Synthesis (MarkdownBody 渲染)
-              // =======================================================
+              // AI Clinical Synthesis Section (Markdown formatted)
               if (hasSynthesis) ...[
                 Container(
                   width: double.infinity,
@@ -425,7 +418,7 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
                 ),
               ],
 
-              // 標題列 + Redis / Retry 狀態 Badge
+              // Metrics Header & Cache/Extraction Status
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -447,7 +440,6 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
                         color: Colors.amber.shade100,
                         borderRadius: BorderRadius.circular(6),
                       ),
-                     
                     )
                   else
                     Container(
@@ -464,7 +456,7 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
               ),
               const SizedBox(height: 12),
 
-              // 指標詳情卡片清單 (無資料防呆)
+              // Lab Reference Interval Card List
               if (_analysisResult!.metricsReference.isEmpty)
                 Container(
                   width: double.infinity,
@@ -509,7 +501,7 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // 標題列
+                          // Card header with metric name and unit badge
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 14,
@@ -566,13 +558,12 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
                             ),
                           ),
 
-                          // 內容區域
+                          // Card content: reference range and definitions
                           Padding(
                             padding: const EdgeInsets.all(14.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // 參考值範圍
                                 if (metricData.lower != null ||
                                     metricData.upper != null) ...[
                                   Row(
@@ -595,8 +586,6 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                 ],
-
-                                // 定義內文
                                 Text(
                                   metricData.definition?.isNotEmpty == true
                                       ? metricData.definition!
@@ -604,14 +593,12 @@ class _AiAgentScreenState extends State<AiAgentScreen> {
                                   style: TextStyle(
                                     fontSize: 13,
                                     height: 1.5,
-                                    color:
-                                        metricData.definition?.isNotEmpty == true
-                                            ? Colors.black54
-                                            : Colors.grey[400],
-                                    fontStyle:
-                                        metricData.definition?.isNotEmpty == true
-                                            ? FontStyle.normal
-                                            : FontStyle.italic,
+                                    color: metricData.definition?.isNotEmpty == true
+                                        ? Colors.black54
+                                        : Colors.grey[400],
+                                    fontStyle: metricData.definition?.isNotEmpty == true
+                                        ? FontStyle.normal
+                                        : FontStyle.italic,
                                   ),
                                 ),
                               ],

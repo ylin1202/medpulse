@@ -1,4 +1,3 @@
-/// 單一醫學指標參考值模型
 class MetricReferenceModel {
   final double? lower;
   final double? upper;
@@ -22,11 +21,11 @@ class MetricReferenceModel {
   }
 }
 
-/// FastAPI /api/v1/analyze 分析報告模型
+/// Data model representing clinical lab analysis responses returned by FastAPI (/api/v1/analyze)
 class AnalysisResponseModel {
   final String status;
   final int detectedMetricsCount;
-  final String? clinicalSynthesis; // 新增：Gemini RAG Generation
+  final String? clinicalSynthesis; // LLM-generated synthesis and RAG narrative
   final Map<String, MetricReferenceModel> metricsReference;
   final int totalAttemptsUsed;
   final bool cached;
@@ -45,13 +44,15 @@ class AnalysisResponseModel {
     final Map<String, MetricReferenceModel> parsedMetrics = {};
 
     rawMetrics.forEach((key, value) {
-      parsedMetrics[key] = MetricReferenceModel.fromJson(value as Map<String, dynamic>);
+      if (value is Map<String, dynamic>) {
+        parsedMetrics[key] = MetricReferenceModel.fromJson(value);
+      }
     });
 
     return AnalysisResponseModel(
       status: json['status'] ?? 'unknown',
       detectedMetricsCount: json['detected_metrics_count'] ?? 0,
-      clinicalSynthesis: json['clinical_synthesis']?.toString(), // 讀取後端生成的摘要
+      clinicalSynthesis: json['clinical_synthesis']?.toString(),
       metricsReference: parsedMetrics,
       totalAttemptsUsed: json['total_attempts_used'] ?? 1,
       cached: json['cached'] ?? false,

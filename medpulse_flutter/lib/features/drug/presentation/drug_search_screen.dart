@@ -6,6 +6,7 @@ import '../../favorite/presentation/favorite_button.dart';
 import '../data/drug_model.dart';
 import 'drug_detail_screen.dart';
 
+
 class DrugSearchScreen extends StatefulWidget {
   const DrugSearchScreen({super.key});
 
@@ -18,7 +19,7 @@ class _DrugSearchScreenState extends State<DrugSearchScreen> {
   List<DrugModel> _searchResults = [];
   bool _isLoading = false;
   
-  // 分頁控制
+  // Pagination state controllers
   int _currentPage = 1;
   final int _limit = 10;
   int _totalPages = 1;
@@ -36,7 +37,7 @@ class _DrugSearchScreenState extends State<DrugSearchScreen> {
     super.dispose();
   }
 
-  /// 呼叫 Flask 後端 API (GET /api/v1/drugs)
+  /// Query Flask API for paginated drug catalog items (GET /api/v1/drugs).
   Future<void> _fetchDrugs({String? query, int page = 1}) async {
     if (!mounted) return;
 
@@ -99,7 +100,7 @@ class _DrugSearchScreenState extends State<DrugSearchScreen> {
       ),
       body: Column(
         children: [
-          // 1. 頂部搜尋整合面板 (白底 + 輕量 Accent 頂條)
+          // 1. Integrated top search panel
           Container(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
             decoration: BoxDecoration(
@@ -118,7 +119,7 @@ class _DrugSearchScreenState extends State<DrugSearchScreen> {
             ),
             child: Column(
               children: [
-                // 搜尋外框卡片
+                // Search input card container
                 Container(
                   decoration: BoxDecoration(
                     color: const Color(0xFFF8F9FA),
@@ -158,7 +159,7 @@ class _DrugSearchScreenState extends State<DrugSearchScreen> {
                         ),
                       ),
                       
-                      // 內嵌式搜尋按鈕
+                      // Embedded search submit button
                       Padding(
                         padding: const EdgeInsets.all(4.0),
                         child: Material(
@@ -188,7 +189,7 @@ class _DrugSearchScreenState extends State<DrugSearchScreen> {
             ),
           ),
 
-          // 筆數資訊與標題
+          // Total metrics count header
           if (!_isLoading && _searchResults.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
@@ -221,7 +222,7 @@ class _DrugSearchScreenState extends State<DrugSearchScreen> {
               ),
             ),
 
-          // 2. 藥品清單區域
+          // 2. Paginated medication results list view
           Expanded(
             child: ValueListenableBuilder<bool>(
               valueListenable: AuthService.authState,
@@ -292,7 +293,7 @@ class _DrugSearchScreenState extends State<DrugSearchScreen> {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // 左側藥品圖示 Icon 膠囊
+                                // Leading medication icon badge
                                 Container(
                                   padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
@@ -307,7 +308,7 @@ class _DrugSearchScreenState extends State<DrugSearchScreen> {
                                 ),
                                 const SizedBox(width: 12),
 
-                                // 中間資訊欄位
+                                // Central medication details
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -323,7 +324,7 @@ class _DrugSearchScreenState extends State<DrugSearchScreen> {
                                       ),
                                       const SizedBox(height: 6),
 
-                                      // Generic Name (柔和綠 Chip)
+                                      // Generic name chip badge
                                       Container(
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 8,
@@ -346,7 +347,7 @@ class _DrugSearchScreenState extends State<DrugSearchScreen> {
                                       ),
                                       const SizedBox(height: 4),
 
-                                      // 製造商
+                                      // Pharmaceutical manufacturer label
                                       Text(
                                         'Mfr: ${drug.manufacturer}',
                                         style: TextStyle(
@@ -360,7 +361,7 @@ class _DrugSearchScreenState extends State<DrugSearchScreen> {
                                   ),
                                 ),
 
-                                // 右側操作按鈕 (收藏 + 箭頭)
+                                // Trailing actions: Favorite bookmark button and navigation arrow
                                 Column(
                                   children: [
                                     FavoriteButton(
@@ -387,7 +388,7 @@ class _DrugSearchScreenState extends State<DrugSearchScreen> {
             ),
           ),
 
-          // 3. 通用分頁列
+          // 3. Shared pagination controller bar
           if (!_isLoading && _searchResults.isNotEmpty)
             PaginationBar(
               currentPage: _currentPage,

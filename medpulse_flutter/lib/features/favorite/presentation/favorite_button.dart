@@ -3,7 +3,7 @@ import '../../../core/auth/auth_service.dart';
 import '../../profile/presentation/auth_modal.dart';
 import '../data/favorite_service.dart';
 
-// 建立全域收藏變更通知器
+/// Global event notifier broadcasting favorite status mutations across widgets.
 class FavoriteNotifier {
   static final ValueNotifier<int?> favoriteChangedDrugId = ValueNotifier<int?>(null);
 
@@ -12,6 +12,8 @@ class FavoriteNotifier {
   }
 }
 
+/// Interactive button toggling pharmaceutical bookmark status with
+/// optimistic UI handling and automated authentication prompt routing.
 class FavoriteButton extends StatefulWidget {
   final int drugId;
 
@@ -29,7 +31,6 @@ class _FavoriteButtonState extends State<FavoriteButton> {
   void initState() {
     super.initState();
     AuthService.authState.addListener(_onAuthChanged);
-    // 監聽全域收藏改變事件
     FavoriteNotifier.favoriteChangedDrugId.addListener(_onFavoriteChanged);
     _checkInitialStatus();
   }
@@ -37,12 +38,11 @@ class _FavoriteButtonState extends State<FavoriteButton> {
   @override
   void dispose() {
     AuthService.authState.removeListener(_onAuthChanged);
-    // 銷毀時移除監聽
     FavoriteNotifier.favoriteChangedDrugId.removeListener(_onFavoriteChanged);
     super.dispose();
   }
 
-  // 收到全域收藏改變通知，若改變的 drugId 與自己相同，就重新向後端/快取查詢狀態
+  /// Sync local bookmark state when an external mutation targeting this drug occurs
   void _onFavoriteChanged() {
     if (!mounted) return;
     final changedDrugId = FavoriteNotifier.favoriteChangedDrugId.value;
@@ -51,6 +51,7 @@ class _FavoriteButtonState extends State<FavoriteButton> {
     }
   }
 
+  /// Update state upon global authentication transitions (e.g., login/logout)
   void _onAuthChanged() {
     if (!mounted) return;
     if (!AuthService.authState.value) {
@@ -71,6 +72,7 @@ class _FavoriteButtonState extends State<FavoriteButton> {
     }
   }
 
+  /// Query server to check bookmark status for authenticated user
   Future<void> _checkInitialStatus() async {
     if (widget.drugId == 0) {
       if (mounted) {
@@ -84,7 +86,6 @@ class _FavoriteButtonState extends State<FavoriteButton> {
 
     try {
       final loggedIn = await AuthService().isLoggedIn();
-      // 若已 unmount，直接中斷執行，不發送多餘請求
       if (!mounted) return;
 
       if (!loggedIn) {
@@ -96,14 +97,13 @@ class _FavoriteButtonState extends State<FavoriteButton> {
       }
 
       final status = await FavoriteService().isFavorited(widget.drugId);
-      // 2：第二次 await 結束後再次驗證掛載狀態
       if (!mounted) return;
 
       setState(() {
         _isFavorited = status;
       });
     } catch (e) {
-      debugPrint('[FavoriteButton] Check Status Failed: $e');
+      debugPrint('[FavoriteButton] Check status failed: $e');
       if (!mounted) return;
       setState(() => _isFavorited = false);
     } finally {
@@ -113,14 +113,15 @@ class _FavoriteButtonState extends State<FavoriteButton> {
     }
   }
 
- Future<void> _toggleFavorite() async {
+  /// Toggle drug bookmark status or prompt authentication modal if unauthenticated
+  Future<void> _toggleFavorite() async {
     if (_isLoading) return;
 
-    // 1. 檢查登入狀態
+    // 1. Verify active authentication state
     final loggedIn = await AuthService().isLoggedIn();
-    if (!mounted) return; 
+    if (!mounted) return;
 
-    // 2. 未登入則彈出 Modal
+    // 2. Prompt authentication modal if unauthenticated
     if (!loggedIn) {
       showDialog(
         context: context,
@@ -138,20 +139,20 @@ class _FavoriteButtonState extends State<FavoriteButton> {
       return;
     }
 
-    // 3. 設定 Loading 狀態
+    // 3. Set pending state
     setState(() => _isLoading = true);
 
     bool success = false;
     final bool previousState = _isFavorited;
 
-    // 4. 發送 API 請求
+    // 4. Dispatch bookmark toggle network request
     if (previousState) {
       success = await FavoriteService().removeFavorite(widget.drugId);
     } else {
       success = await FavoriteService().addFavorite(widget.drugId);
     }
 
-    // 5. 請求完成後的防護與狀態更新
+    // 5. Update local state and broadcast event upon response
     if (!mounted) return;
 
     setState(() {
@@ -167,7 +168,11 @@ class _FavoriteButtonState extends State<FavoriteButton> {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_isFavorited ? 'Drug saved to favorites' : 'Drug removed from favorites'),
+          content: Text(
+            _isFavorited
+                ? 'Drug saved to favorites'
+                : 'Drug removed from favorites',
+          ),
           duration: const Duration(seconds: 1),
         ),
       );
@@ -191,7 +196,10 @@ class _FavoriteButtonState extends State<FavoriteButton> {
         height: 24,
         child: Padding(
           padding: EdgeInsets.all(4.0),
-          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00796B)),
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Color(0xFF00796B),
+          ),
         ),
       );
     }

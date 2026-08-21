@@ -1,6 +1,5 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-/// 藥局資料模型
 class PharmacyModel {
   final int id;
   final String name;

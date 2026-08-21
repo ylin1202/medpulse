@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/widgets/pagination_bar.dart';
 import '../data/fact_check_model.dart';
 import 'fact_check_detail_screen.dart';
+
 
 class FactCheckScreen extends StatefulWidget {
   const FactCheckScreen({super.key});
@@ -18,14 +18,14 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
   List<FactCheckModel> _claims = [];
   bool _isLoading = false;
 
-  // 快捷 Prompt 建議標籤
+  // Suggested prompt query chips for quick evaluation
   final List<String> _suggestedPrompts = [
     'Vitamin D prevents cold?',
     'Mammogram false positives',
     'Can lemons cure cancer?',
   ];
 
-  // 分頁控制
+  // Pagination state controllers
   int _currentPage = 1;
   final int _limit = 10;
   int _totalPages = 1;
@@ -34,10 +34,16 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchFactChecks(); // 預設撈取一般清單
+    _fetchFactChecks();
   }
 
-  /// 1. 預設模式：一般 SQL 搜尋 (GET /fact-checks)
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  /// 1. Default mode: Standard relational keyword search (GET /api/v1/fact-checks).
   Future<void> _fetchFactChecks({String? query, int page = 1}) async {
     setState(() => _isLoading = true);
 
@@ -45,7 +51,7 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
 
     try {
       debugPrint(
-        '[Fact-Check Normal Search] Fetching page $page, keyword: "$keyword"',
+        '[Fact-Check Search] Querying page $page with keyword: "$keyword"',
       );
 
       final response = await ApiClient().dio.get(
@@ -70,7 +76,7 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
         });
       }
     } catch (e) {
-      debugPrint('[Fact-Check Normal Error]: $e');
+      debugPrint('[Fact-Check Search Error]: $e');
       if (mounted) {
         setState(() {
           _claims = [];
@@ -80,7 +86,7 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
     }
   }
 
-  /// 2. RAG 專屬模式：持續顯示 Analyzing AI 對話框直到結果生成完畢
+  /// 2. Semantic RAG mode: Dense vector retrieval + Gemini synthesis via FastAPI.
   Future<void> _triggerRagSearch({String? query}) async {
     final String keyword = (query ?? _searchController.text).trim();
 
@@ -89,7 +95,7 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
       return;
     }
 
-    // 彈出持續旋轉的 AI 分析中對話框 (禁止點擊背景關閉)
+    // Present non-dismissible loading modal during inference
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -97,7 +103,9 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
         return PopScope(
           canPop: false,
           child: Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             backgroundColor: Colors.white,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
@@ -109,7 +117,9 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
                     height: 48,
                     child: CircularProgressIndicator(
                       strokeWidth: 3.5,
-                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00796B)),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Color(0xFF00796B),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 22),
@@ -140,24 +150,14 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
     );
 
     try {
-      debugPrint('[RAG Vector Search] Querying FastAPI for: "$keyword"');
+      debugPrint('[RAG Vector Search] Sending query to AI service: "$keyword"');
 
-      final fastapiDio = Dio(
-        BaseOptions(
-          baseUrl: 'http://localhost:8000',
-          connectTimeout: const Duration(seconds: 30),
-          receiveTimeout: const Duration(seconds: 60),
-          sendTimeout: const Duration(seconds: 30),
-          headers: {'Content-Type': 'application/json'},
-        ),
-      );
-
-      final response = await fastapiDio.post(
+      final response = await ApiClient().fastApiDio.post(
         '/api/v1/factcheck',
         data: {'query': keyword},
       );
 
-      // 關閉 Loading Dialog
+      // Dismiss inference dialog
       if (mounted) {
         Navigator.of(context, rootNavigator: true).pop();
       }
@@ -180,11 +180,10 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
     } catch (e) {
       debugPrint('[RAG Vector Search Error]: $e');
       if (mounted) {
-        // 發生錯誤時確保關閉 Loading Dialog
         Navigator.of(context, rootNavigator: true).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('AI Search failed: $e'),
+            content: Text('AI verification failed: $e'),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -192,7 +191,7 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
     }
   }
 
-  /// 彈出 RAG 闢謠結果 Dialog (支援 Markdown 渲染)
+  /// Present synthesized RAG verification results in a modal dialog.
   void _showRagResultDialog(FactCheckModel item) {
     final themeColor = _getVerdictColor(item.verdict);
     final scorePercent = item.score != null
@@ -206,7 +205,9 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
         child: Container(
           constraints: const BoxConstraints(maxWidth: 480),
           padding: const EdgeInsets.all(20),
@@ -215,7 +216,7 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 頂部標籤與關閉按鈕
+                // Header row: Verdict badge, similarity score, and close action
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -272,7 +273,7 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // 原始標題 (支援 Markdown)
+                // Claim title (Markdown formatted)
                 MarkdownBody(
                   data: item.claim,
                   selectable: true,
@@ -291,7 +292,7 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
                 ),
                 const Divider(height: 24),
 
-                // Gemini 生成闢謠標題
+                // AI synthesis title
                 Row(
                   children: const [
                     Icon(
@@ -312,7 +313,7 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
                 ),
                 const SizedBox(height: 8),
 
-                // Gemini 生成的白話闢謠解答 (Markdown 渲染)
+                // Synthesized explanation body (Markdown formatted)
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
@@ -339,7 +340,7 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // 底部按鈕組
+                // Action buttons
                 Row(
                   children: [
                     Expanded(
@@ -392,11 +393,11 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
 
   Color _getVerdictColor(String verdict) {
     final v = verdict.toLowerCase();
-    if (v.contains('false') || v.contains('謠言') || v.contains('不實')) {
+    if (v.contains('false') || v.contains('untrue') || v.contains('misleading')) {
       return const Color(0xFFE57373);
-    } else if (v.contains('true') || v.contains('真實') || v.contains('正確')) {
+    } else if (v.contains('true') || v.contains('correct') || v.contains('verified')) {
       return const Color(0xFF81C784);
-    } else if (v.contains('mix') || v.contains('partial') || v.contains('部分')) {
+    } else if (v.contains('mix') || v.contains('partial') || v.contains('unproven')) {
       return const Color(0xFFFFB74D);
     }
     return Colors.blueGrey[400]!;
@@ -423,7 +424,7 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
       ),
       body: Column(
         children: [
-          // 1. RAG 專屬搜尋頂欄面板
+          // 1. RAG Search & Prompt Panel
           Container(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             decoration: const BoxDecoration(
@@ -491,7 +492,7 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
                     ),
                     const SizedBox(width: 8),
 
-                    // AI 智能闢謠按鈕
+                    // AI Fact-Check Action Button
                     Container(
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
@@ -538,7 +539,7 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // 快捷 Prompts Chips
+                // Quick Prompt Chips
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -591,7 +592,7 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
             ),
           ),
 
-          // 2. 底層清單
+          // 2. Archived claims list view
           Expanded(
             child: _isLoading
                 ? const Center(
@@ -667,7 +668,7 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          // 修正溢位問題的頂部標籤與來源
+                                          // Verdict badge and source label
                                           Row(
                                             mainAxisAlignment:
                                                 MainAxisAlignment.spaceBetween,
@@ -701,7 +702,6 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
                                                 ),
                                               ),
                                               const SizedBox(width: 12),
-                                              // 使用 Expanded 與 ellipsis 防止長網址破版
                                               Expanded(
                                                 child: Text(
                                                   item.source,
@@ -754,7 +754,7 @@ class _FactCheckScreenState extends State<FactCheckScreen> {
                   ),
           ),
 
-          // 3. 底部分頁控制
+          // 3. Bottom pagination controls
           PaginationBar(
             currentPage: _currentPage,
             totalPages: _totalPages,

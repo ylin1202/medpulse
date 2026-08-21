@@ -4,12 +4,12 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../../core/network/api_client.dart';
 import '../data/pharmacy_model.dart';
 
-/// 台灣主要縣市資料模型
+/// Administrative division and geospatial viewport model for Taiwanese municipalities.
 class CityOption {
-  final String label; // UI 顯示的中英文名稱
-  final String? value;
-  final LatLng center; // 切換該縣市時地圖鏡頭移動的中心點
-  final double zoom; // 預設適合的縮放比例
+  final String label; // UI display label
+  final String? value; // API query parameter
+  final LatLng center; // Geospatial camera anchor coordinates
+  final double zoom; // Optimal map viewport zoom level
 
   const CityOption({
     required this.label,
@@ -19,7 +19,7 @@ class CityOption {
   });
 }
 
-// 台灣主要縣市對照清單
+/// Normalized geographic coordinates and administrative boundaries for Taiwan municipalities.
 const List<CityOption> cityOptions = [
   CityOption(
     label: 'Taipei City (臺北市)',
@@ -89,6 +89,8 @@ const List<CityOption> cityOptions = [
   ),
 ];
 
+/// Screen presenting an interactive geospatial locator for community pharmacies,
+/// featuring native point clustering, NHI contract status filtering, and modal detail views.
 class PharmacyMapScreen extends StatefulWidget {
   const PharmacyMapScreen({super.key});
 
@@ -105,10 +107,10 @@ class _PharmacyMapScreenState extends State<PharmacyMapScreen> {
   bool _isLoading = true;
   PharmacyModel? _selectedPharmacy;
 
-  // 當前選中的縣市
+  // Active selected administrative region
   CityOption _selectedCity = cityOptions[0];
 
-  // 官方 Cluster 管理器 ID
+  // Native map clustering manager identifier
   static const ClusterManagerId _clusterManagerId = ClusterManagerId(
     'pharmacy_cluster',
   );
@@ -120,7 +122,7 @@ class _PharmacyMapScreenState extends State<PharmacyMapScreen> {
     _fetchPharmacies();
   }
 
-  /// 初始化 Google 官方原生的 ClusterManager
+  /// Initialize Google Maps native marker clustering manager.
   void _initClusterManager() {
     _clusterManagers = {
       ClusterManager(
@@ -134,7 +136,7 @@ class _PharmacyMapScreenState extends State<PharmacyMapScreen> {
     };
   }
 
-  /// 向 API 請求藥局資料
+  /// Query backend for geospatial pharmacy coordinates by administrative region (GET /api/v1/pharmacies).
   Future<void> _fetchPharmacies() async {
     setState(() => _isLoading = true);
 
@@ -157,7 +159,7 @@ class _PharmacyMapScreenState extends State<PharmacyMapScreen> {
           return Marker(
             markerId: MarkerId('pharmacy_${pharmacy.id}'),
             position: pharmacy.location,
-            clusterManagerId: _clusterManagerId, // 自動交給官方原生的 ClusterManager 計算
+            clusterManagerId: _clusterManagerId,
             infoWindow: InfoWindow(
               title: pharmacy.name,
               snippet: pharmacy.address,
@@ -182,12 +184,12 @@ class _PharmacyMapScreenState extends State<PharmacyMapScreen> {
         });
       }
     } catch (e) {
-      print('[Map Error] Failed to load pharmacies: $e');
+      debugPrint('[Pharmacy Map Error] Failed to load pharmacies: $e');
       setState(() => _isLoading = false);
     }
   }
 
-  /// 移動地圖鏡頭至指定縣市
+  /// Animate camera viewport to target administrative coordinates.
   void _moveCameraToCity(CityOption city) {
     _mapController?.animateCamera(
       CameraUpdate.newLatLngZoom(city.center, city.zoom),
@@ -196,15 +198,13 @@ class _PharmacyMapScreenState extends State<PharmacyMapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 取得手機頂部安全區域高度 (動態避開瀏海/狀態列)
     final double topSafeArea = MediaQuery.of(context).padding.top;
 
     return Scaffold(
-      // 💡 1. 直接移除傳統 AppBar，採用全螢幕地圖
       resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
-          // 2. 全螢幕滿版 Google Maps
+          // 1. Fullscreen Google Maps Canvas
           GoogleMap(
             initialCameraPosition: CameraPosition(
               target: _selectedCity.center,
@@ -214,7 +214,7 @@ class _PharmacyMapScreenState extends State<PharmacyMapScreen> {
             clusterManagers: _clusterManagers,
             myLocationEnabled: true,
             myLocationButtonEnabled: true,
-            padding: const EdgeInsets.only(top: 90, bottom: 20), // 留出控制項空間避免擋住按鈕
+            padding: const EdgeInsets.only(top: 90, bottom: 20),
             onMapCreated: (controller) {
               _mapController = controller;
             },
@@ -223,9 +223,9 @@ class _PharmacyMapScreenState extends State<PharmacyMapScreen> {
             },
           ),
 
-          // 3. 一體化懸浮地圖搜尋/控制列 (Floating Bar)
+          // 2. Floating Location Selection & Action Header Bar
           Positioned(
-            top: topSafeArea + 12, // 自動適應不同手機的動態島 / 瀏海
+            top: topSafeArea + 12,
             left: 16,
             right: 16,
             child: Container(
@@ -243,7 +243,6 @@ class _PharmacyMapScreenState extends State<PharmacyMapScreen> {
               ),
               child: Row(
                 children: [
-                  // 主題圖示
                   const Icon(
                     Icons.local_pharmacy,
                     color: Color(0xFF00796B),
@@ -251,7 +250,7 @@ class _PharmacyMapScreenState extends State<PharmacyMapScreen> {
                   ),
                   const SizedBox(width: 10),
 
-                  // 縣市選擇 Dropdown
+                  // Municipality Dropdown Selector
                   Expanded(
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<CityOption>(
@@ -298,7 +297,7 @@ class _PharmacyMapScreenState extends State<PharmacyMapScreen> {
                   ),
                   const SizedBox(width: 4),
 
-                  // 重新整理按鈕 (可依據 _isLoading 顯示載入動畫)
+                  // Refresh Indicator / Action Button
                   IconButton(
                     icon: _isLoading
                         ? const SizedBox(
@@ -322,7 +321,7 @@ class _PharmacyMapScreenState extends State<PharmacyMapScreen> {
             ),
           ),
 
-          // 4. 點擊藥局時彈出的底部詳細資訊卡片 (保持原本漂亮的設計)
+          // 3. Selected Pharmacy Metadata Bottom Sheet
           if (_selectedPharmacy != null)
             Positioned(
               bottom: 24,

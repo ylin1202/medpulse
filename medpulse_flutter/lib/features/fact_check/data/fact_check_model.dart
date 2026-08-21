@@ -3,11 +3,11 @@ class FactCheckModel {
   final String claim;
   final String verdict;
   final String summary;
-  final String explanation; // AI 生成摘要 (Dialog 彈窗用)
-  final String originalExplanation; // 資料庫原始文獻 (DetailScreen 內文用)
-  final String source; // 上方機構名稱 (如 The Wall Street Journal)
-  final String claimUrl; // 下方原始連結 (如 wsj.com 或完整 URL)
-  final double? score;
+  final String explanation; // AI-synthesized contextual explanation (for modal dialogs)
+  final String originalExplanation; // Canonical evidentiary literature from database (for detail views)
+  final String source; // Formatted institutional publisher
+  final String claimUrl; // Raw source verification link or canonical domain URL
+  final double? score; // Cosine similarity or hybrid retrieval score
 
   FactCheckModel({
     required this.id,
@@ -21,7 +21,7 @@ class FactCheckModel {
     this.score,
   });
 
-  /// 將 raw sources 字串格式化為機構名稱
+  /// Normalize and map raw publisher strings/URLs to standardized institutional names.
   static String _formatPublisherName(String raw) {
     final s = raw.toLowerCase().trim();
     if (s.isEmpty) return 'PUBHEALTH Dataset';
@@ -30,17 +30,22 @@ class FactCheckModel {
     if (s.contains('snopes')) return 'Snopes';
     if (s.contains('politifact')) return 'PolitiFact';
     if (s.contains('factcheck')) return 'FactCheck.org';
-    if (s.contains('healthfeedback') || s.contains('sciencefeedback'))
+    if (s.contains('healthfeedback') || s.contains('sciencefeedback')) {
       return 'Health Feedback';
-    if (s.contains('nytimes') || s.contains('new york times'))
+    }
+    if (s.contains('nytimes') || s.contains('new york times')) {
       return 'The New York Times';
-    if (s.contains('washingtonpost') || s.contains('wapo'))
+    }
+    if (s.contains('washingtonpost') || s.contains('wapo')) {
       return 'The Washington Post';
+    }
     if (s.contains('reuters')) return 'Reuters Fact Check';
-    if (s.contains('apnews') || s.contains('associated press'))
+    if (s.contains('apnews') || s.contains('associated press')) {
       return 'Associated Press';
-    if (s.contains('who.int') || s.contains('who'))
+    }
+    if (s.contains('who.int') || s.contains('who')) {
       return 'World Health Organization (WHO)';
+    }
     if (s.contains('cdc.gov') || s.contains('cdc')) return 'CDC';
     if (s.contains('bbc')) return 'BBC News';
     if (s.contains('cnn')) return 'CNN';
@@ -57,7 +62,7 @@ class FactCheckModel {
   }
 
   factory FactCheckModel.fromJson(Map<String, dynamic> json) {
-    // 取得資料庫中原始的 sources 欄位值
+    // Resolve raw source identifier from payload fields
     final String rawSources =
         (json['sources'] ?? json['source'] ?? json['claim_url'] ?? '')
             .toString()
@@ -69,6 +74,7 @@ class FactCheckModel {
     final String mainText = (json['main_text'] ?? '').toString().trim();
     final String exp = (json['explanation'] ?? '').toString().trim();
 
+    // Fallback cascade for canonical evidence text
     final String resolvedOriginalExplanation = origExp.isNotEmpty
         ? origExp
         : (mainText.isNotEmpty ? mainText : exp);
@@ -83,8 +89,8 @@ class FactCheckModel {
       summary: resolvedSummary,
       explanation: exp,
       originalExplanation: resolvedOriginalExplanation,
-      source: _formatPublisherName(rawSources), // 上方顯示機構名
-      claimUrl: rawSources, // 下方保留原始來源連結
+      source: _formatPublisherName(rawSources),
+      claimUrl: rawSources,
       score: json['score'] != null
           ? (json['score'] as num).toDouble()
           : (json['similarity_score'] != null

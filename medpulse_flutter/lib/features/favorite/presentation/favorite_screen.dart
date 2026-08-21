@@ -20,6 +20,7 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
     _loadFavorites();
   }
 
+  /// Retrieve bookmarked medications from the backend service.
   Future<void> _loadFavorites() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
@@ -32,6 +33,7 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
     }
   }
 
+  /// Remove a medication bookmark and update the local list state.
   Future<void> _removeFavorite(int drugId, int index) async {
     final success = await FavoriteService().removeFavorite(drugId);
     if (success && mounted) {
@@ -39,12 +41,12 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
         _favorites.removeAt(index);
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Removed drug from favorites')),
+        const SnackBar(content: Text('Removed medication from saved list.')),
       );
     }
   }
 
-  // 對齊 DrugModel 欄位
+  /// Map dynamic API JSON payloads into a strongly-typed DrugModel.
   DrugModel _mapToDrugModel(Map<String, dynamic> item) {
     return DrugModel.fromJson({
       'id': item['drug_id'] ?? item['id'],
@@ -61,20 +63,35 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Saved Medications', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Saved Medications',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: const Color(0xFF00796B),
         foregroundColor: Colors.white,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF00796B)))
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFF00796B)),
+            )
           : _favorites.isEmpty
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.medication_outlined, size: 64, color: Colors.grey[400]),
+                      Icon(
+                        Icons.medication_outlined,
+                        size: 64,
+                        color: Colors.grey[400],
+                      ),
                       const SizedBox(height: 16),
-                      Text('No saved medications yet', style: TextStyle(fontSize: 16, color: Colors.grey[600])),
+                      Text(
+                        'No saved medications yet.',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                        ),
+                      ),
                     ],
                   ),
                 )
@@ -86,35 +103,53 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
                     itemCount: _favorites.length,
                     itemBuilder: (context, index) {
                       final item = _favorites[index] as Map<String, dynamic>;
-                      
-                      // 安全類型解析
-                      final drugId = item['drug_id'] is int 
-                          ? item['drug_id'] as int 
+
+                      // Safe parsing of drug identifier
+                      final drugId = item['drug_id'] is int
+                          ? item['drug_id'] as int
                           : int.tryParse(item['drug_id'].toString()) ?? 0;
 
                       final brandName = item['brand_name'] ?? 'Unknown Drug';
                       final genericName = item['generic_name'] ?? '';
-                      final purpose = item['purpose'] ?? item['manufacturer_name'] ?? '';
+                      final purpose =
+                          item['purpose'] ?? item['manufacturer_name'] ?? '';
 
                       return Card(
                         margin: const EdgeInsets.only(bottom: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
                           leading: const CircleAvatar(
                             backgroundColor: Color(0xFFE0F2F1),
-                            child: Icon(Icons.medication_outlined, color: Color(0xFF00796B)),
+                            child: Icon(
+                              Icons.medication_outlined,
+                              color: Color(0xFF00796B),
+                            ),
                           ),
                           title: Text(
                             brandName,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               if (genericName.isNotEmpty) ...[
                                 const SizedBox(height: 4),
-                                Text(genericName, style: const TextStyle(fontWeight: FontWeight.w500, color: Color(0xFF004D40))),
+                                Text(
+                                  genericName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFF004D40),
+                                  ),
+                                ),
                               ],
                               if (purpose.isNotEmpty) ...[
                                 const SizedBox(height: 2),
@@ -122,7 +157,10 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
                                   purpose,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 12,
+                                  ),
                                 ),
                               ],
                             ],
@@ -131,22 +169,29 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.red,
+                                ),
                                 onPressed: () => _removeFavorite(drugId, index),
                               ),
-                              const Icon(Icons.chevron_right, color: Colors.grey),
+                              const Icon(
+                                Icons.chevron_right,
+                                color: Colors.grey,
+                              ),
                             ],
                           ),
-                          // 點擊跳轉到 DrugDetailScreen，並帶入建好的 DrugModel
+                          // Navigate to DrugDetailScreen and refresh on return
                           onTap: () {
                             final drugModel = _mapToDrugModel(item);
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => DrugDetailScreen(drug: drugModel),
+                                builder: (context) =>
+                                    DrugDetailScreen(drug: drugModel),
                               ),
                             ).then((_) {
-                              // 從詳情頁返回時自動重新載入清單，同步取消收藏後的狀態
+                              // Resync saved list to reflect changes from detail screen
                               _loadFavorites();
                             });
                           },

@@ -6,7 +6,7 @@ class FavoriteService {
   factory FavoriteService() => _instance;
   FavoriteService._internal();
 
-  /// 1. 取得收藏的藥品清單 (GET /api/v1/favorites)
+  /// 1. Retrieve bookmarked drug catalog items (GET /api/v1/favorites).
   Future<List<dynamic>> getFavorites() async {
     try {
       final response = await ApiClient().flaskDio.get('/favorites');
@@ -15,12 +15,12 @@ class FavoriteService {
       }
       return [];
     } catch (e) {
-      debugPrint('Failed to fetch favorites: $e');
+      debugPrint('[FavoriteService] Failed to fetch favorites: $e');
       return [];
     }
   }
 
-  /// 2. 新增藥品收藏 (POST /api/v1/favorites)
+  /// 2. Add drug to user bookmarks (POST /api/v1/favorites).
   Future<bool> addFavorite(int drugId) async {
     try {
       final response = await ApiClient().flaskDio.post(
@@ -29,23 +29,23 @@ class FavoriteService {
       );
       return response.statusCode == 201 || response.statusCode == 200;
     } catch (e) {
-      debugPrint('Failed to add favorite: $e');
+      debugPrint('[FavoriteService] Failed to add favorite: $e');
       return false;
     }
   }
 
-  /// 3. 取消藥品收藏 (DELETE /api/v1/favorites/:drugId)
+  /// 3. Remove drug from user bookmarks (DELETE /api/v1/favorites/:drugId).
   Future<bool> removeFavorite(int drugId) async {
     try {
       final response = await ApiClient().flaskDio.delete('/favorites/$drugId');
       return response.statusCode == 200;
     } catch (e) {
-      debugPrint('Failed to remove favorite: $e');
+      debugPrint('[FavoriteService] Failed to remove favorite: $e');
       return false;
     }
   }
 
-  /// 4. 檢查藥品是否已被收藏 (GET /api/v1/favorites/check/:drugId)
+  /// 4. Verify whether a drug is bookmarked by the authenticated user (GET /api/v1/favorites/check/:drugId).
   Future<bool> isFavorited(int drugId) async {
     try {
       final response = await ApiClient().flaskDio.get('/favorites/check/$drugId');
@@ -54,6 +54,7 @@ class FavoriteService {
       }
       return false;
     } catch (e) {
+      debugPrint('[FavoriteService] Failed to check favorite status: $e');
       return false;
     }
   }

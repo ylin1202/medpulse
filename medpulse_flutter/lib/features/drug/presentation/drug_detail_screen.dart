@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/network/api_client.dart';
 import '../data/drug_model.dart';
 
+
 class DrugDetailScreen extends StatefulWidget {
   final DrugModel drug;
 
@@ -22,7 +23,7 @@ class _DrugDetailScreenState extends State<DrugDetailScreen> {
     _fetchDrugDetail();
   }
 
-  /// 呼叫 Flask 取得單一藥品詳細說明書 (GET /api/v1/drugs/<drug_id>)
+  /// Query Flask API for detailed OpenFDA monograph (GET /api/v1/drugs/<drug_id>).
   Future<void> _fetchDrugDetail() async {
     if (_drugDetail.id.isEmpty) {
       if (mounted) setState(() => _isLoading = false);
@@ -41,7 +42,7 @@ class _DrugDetailScreenState extends State<DrugDetailScreen> {
         });
       }
     } catch (e) {
-      debugPrint('[Drug Detail Error]: $e (Showing preliminary data)');
+      debugPrint('[Drug Detail Error]: $e (Displaying cached preliminary data)');
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -49,7 +50,7 @@ class _DrugDetailScreenState extends State<DrugDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA), // 柔和灰底
+      backgroundColor: const Color(0xFFF8F9FA), // Soft grey background canvas
       appBar: AppBar(
         title: const Text(
           'Drug Information',
@@ -68,7 +69,7 @@ class _DrugDetailScreenState extends State<DrugDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 1. 藥品頂部英雄卡片 (Hero Header Banner)
+                  // 1. Pharmaceutical Hero Header Card
                   Container(
                     padding: const EdgeInsets.all(16.0),
                     decoration: BoxDecoration(
@@ -89,7 +90,7 @@ class _DrugDetailScreenState extends State<DrugDetailScreen> {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // 主題膠囊 Icon
+                            // Themed medication icon container
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
@@ -104,7 +105,7 @@ class _DrugDetailScreenState extends State<DrugDetailScreen> {
                             ),
                             const SizedBox(width: 14),
 
-                            // 藥名與通用名
+                            // Brand and generic titles
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -137,7 +138,7 @@ class _DrugDetailScreenState extends State<DrugDetailScreen> {
                           child: Divider(height: 1, color: Color(0xFFE0E0E0)),
                         ),
 
-                        // 底部詳細資訊與標籤
+                        // Manufacturer metadata label
                         Row(
                           children: [
                             const Icon(
@@ -164,7 +165,7 @@ class _DrugDetailScreenState extends State<DrugDetailScreen> {
                   ),
                   const SizedBox(height: 18),
 
-                  // 2. 詳細內容區塊列表
+                  // 2. Clinical Monograph Section Cards
                   _buildSectionCard(
                     title: 'Indications & Usage',
                     content: _drugDetail.indications,
@@ -202,6 +203,7 @@ class _DrugDetailScreenState extends State<DrugDetailScreen> {
     );
   }
 
+  /// Builds a themed modular card for categorized monograph sections.
   Widget _buildSectionCard({
     required String title,
     required String content,
@@ -226,7 +228,7 @@ class _DrugDetailScreenState extends State<DrugDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 標題列 (帶淡色彩標區塊)
+          // Section header with tinted accent background
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
@@ -252,7 +254,7 @@ class _DrugDetailScreenState extends State<DrugDetailScreen> {
             ),
           ),
 
-          // 內文區域
+          // Monograph body content
           Padding(
             padding: const EdgeInsets.all(14.0),
             child: Text(
