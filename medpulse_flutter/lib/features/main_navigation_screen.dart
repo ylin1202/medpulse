@@ -42,7 +42,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           });
         },
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFF00796B), // 醫療感深綠色 (Teal)
+        selectedFontSize: 11, 
+        unselectedFontSize: 10,
+        selectedItemColor: const Color(0xFF00796B), 
         unselectedItemColor: Colors.grey,
         items: const [
           BottomNavigationBarItem(
