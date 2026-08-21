@@ -1,26 +1,29 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import '../data/fact_check_model.dart';
 
 class FactCheckDetailScreen extends StatelessWidget {
   final FactCheckModel factCheck;
+  final String? aiSummary; // 僅從彈窗按鈕點進來時傳入
 
-  const FactCheckDetailScreen({super.key, required this.factCheck});
+  const FactCheckDetailScreen({
+    super.key,
+    required this.factCheck,
+    this.aiSummary,
+  });
 
-  /// 依據 verdict 取得對應的主題顏色 (柔和配色)
   Color _getVerdictColor(String verdict) {
     final v = verdict.toLowerCase();
     if (v.contains('false') || v.contains('謠言') || v.contains('不實')) {
-      return const Color(0xFFE57373); // 柔和紅
+      return const Color(0xFFE57373);
     } else if (v.contains('true') || v.contains('真實') || v.contains('正確')) {
-      return const Color(0xFF81C784); // 柔和綠
+      return const Color(0xFF81C784);
     } else if (v.contains('mix') || v.contains('partial') || v.contains('部分')) {
-      return const Color(0xFFFFB74D); // 柔和橘
+      return const Color(0xFFFFB74D);
     }
     return Colors.blueGrey[400]!;
   }
 
-  /// 依據 verdict 取得對應圖示
   IconData _getVerdictIcon(String verdict) {
     final v = verdict.toLowerCase();
     if (v.contains('false') || v.contains('謠言') || v.contains('不實')) {
@@ -33,24 +36,31 @@ class FactCheckDetailScreen extends StatelessWidget {
     return Icons.help_outline_rounded;
   }
 
-  /// 開啟外部網址
-  Future<void> _launchUrl(String urlString) async {
-    if (urlString.isEmpty) return;
-    final Uri url = Uri.parse(urlString);
-    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      debugPrint('Could not launch $urlString');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final themeColor = _getVerdictColor(factCheck.verdict);
     final verdictIcon = _getVerdictIcon(factCheck.verdict);
 
+    final String originalContent =
+        factCheck.originalExplanation.trim().isNotEmpty
+            ? factCheck.originalExplanation.trim()
+            : (factCheck.summary.trim().isNotEmpty
+                ? factCheck.summary.trim()
+                : 'No original text available.');
+
+    final String sourceText = factCheck.source.trim();
+    final bool hasSource =
+        sourceText.isNotEmpty &&
+        sourceText != 'PUBHEALTH' &&
+        sourceText != 'PUBHEALTH Dataset';
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text('Fact-Check Detail', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Fact-Check Detail',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: const Color(0xFF00796B),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -60,7 +70,7 @@ class FactCheckDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. 頂部 Hero Verdict 卡片
+            // 1. 頂部 Verdict 卡片
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -77,28 +87,36 @@ class FactCheckDetailScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
                 child: Column(
                   children: [
-                    // 彩色 Header 帶（呈現 VERDICT 結果）
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       color: themeColor.withOpacity(0.15),
                       child: Row(
                         children: [
-                          Icon(verdictIcon, color: themeColor == const Color(0xFFFFB74D) ? Colors.orange[900] : themeColor, size: 26),
+                          Icon(
+                            verdictIcon,
+                            color: themeColor == const Color(0xFFFFB74D)
+                                ? Colors.orange[900]
+                                : themeColor,
+                            size: 26,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             factCheck.verdict.toUpperCase(),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w900,
-                              color: themeColor == const Color(0xFFFFB74D) ? Colors.orange[900] : themeColor,
+                              color: themeColor == const Color(0xFFFFB74D)
+                                  ? Colors.orange[900]
+                                  : themeColor,
                               letterSpacing: 0.5,
                             ),
                           ),
                         ],
                       ),
                     ),
-
-                    // 宣稱內容 (Claim)
                     Padding(
                       padding: const EdgeInsets.all(18.0),
                       child: Column(
@@ -106,7 +124,11 @@ class FactCheckDetailScreen extends StatelessWidget {
                         children: [
                           Row(
                             children: const [
-                              Icon(Icons.format_quote_rounded, size: 20, color: Colors.grey),
+                              Icon(
+                                Icons.format_quote_rounded,
+                                size: 20,
+                                color: Colors.grey,
+                              ),
                               SizedBox(width: 4),
                               Text(
                                 'CLAIM / RUMOR',
@@ -138,7 +160,67 @@ class FactCheckDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // 2. 醫學解析 (Medical Explanation) 標題
+            // 2. 只有從彈窗 Dialog 進入時才顯示的 AI 生成區塊 (支援 Markdown 解析)
+            if (aiSummary != null && aiSummary!.trim().isNotEmpty) ...[
+              Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00796B),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.auto_awesome,
+                    size: 18,
+                    color: Color(0xFF00796B),
+                  ),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'AI Synthesis Summary',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF004D40),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.teal.shade100),
+                ),
+                child: MarkdownBody(
+                  data: aiSummary!.trim(),
+                  selectable: true,
+                  styleSheet: MarkdownStyleSheet(
+                    p: const TextStyle(
+                      fontSize: 14.5,
+                      height: 1.6,
+                      color: Color(0xFF1B4D3E),
+                    ),
+                    strong: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF004D40),
+                    ),
+                    listBullet: const TextStyle(
+                      color: Color(0xFF00796B),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+
+            // 3. 原始醫學文獻卡片 (支援 Markdown 解析)
             Row(
               children: [
                 Container(
@@ -150,10 +232,14 @@ class FactCheckDetailScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                const Icon(Icons.science_outlined, size: 20, color: Color(0xFF00796B)),
+                const Icon(
+                  Icons.science_outlined,
+                  size: 20,
+                  color: Color(0xFF00796B),
+                ),
                 const SizedBox(width: 6),
                 const Text(
-                  'Medical Explanation & Evidence',
+                  'Original Medical Evidence & Report',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -164,7 +250,6 @@ class FactCheckDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            // 醫學解析內容卡片
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(18.0),
@@ -179,25 +264,37 @@ class FactCheckDetailScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Text(
-                factCheck.explanation.isEmpty ? factCheck.summary : factCheck.explanation,
-                style: const TextStyle(
-                  fontSize: 15,
-                  height: 1.6,
-                  color: Color(0xFF37474F),
-                  letterSpacing: 0.2,
+              child: MarkdownBody(
+                data: originalContent,
+                selectable: true,
+                styleSheet: MarkdownStyleSheet(
+                  p: const TextStyle(
+                    fontSize: 15,
+                    height: 1.6,
+                    color: Color(0xFF37474F),
+                    letterSpacing: 0.2,
+                  ),
+                  strong: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                  listBullet: const TextStyle(
+                    color: Color(0xFF00796B),
+                  ),
                 ),
               ),
             ),
             const SizedBox(height: 24),
 
-            // 3. 參考來源卡片 (Source Card)
+            // 4. 來源卡片
             Container(
               padding: const EdgeInsets.all(16.0),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFF00796B).withOpacity(0.2)),
+                border: Border.all(
+                  color: const Color(0xFF00796B).withOpacity(0.2),
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.02),
@@ -217,7 +314,11 @@ class FactCheckDetailScreen extends StatelessWidget {
                           color: const Color(0xFF00796B).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(Icons.verified_outlined, size: 18, color: Color(0xFF00796B)),
+                        child: const Icon(
+                          Icons.verified_outlined,
+                          size: 18,
+                          color: Color(0xFF00796B),
+                        ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -226,11 +327,15 @@ class FactCheckDetailScreen extends StatelessWidget {
                           children: [
                             const Text(
                               'VERIFIED SOURCE',
-                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                              ),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              factCheck.source,
+                              hasSource ? sourceText : 'PUBHEALTH Dataset',
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
@@ -244,44 +349,43 @@ class FactCheckDetailScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-
-                  // 若有原始報導網址，顯示點擊微按鈕
-                  if (factCheck.claimUrl.isNotEmpty) ...[
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12.0),
-                      child: Divider(height: 1),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12.0),
+                    child: Divider(height: 1),
+                  ),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
                     ),
-                    InkWell(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00796B).withOpacity(0.05),
                       borderRadius: BorderRadius.circular(10),
-                      onTap: () => _launchUrl(factCheck.claimUrl),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF00796B).withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.open_in_new_rounded, size: 16, color: Color(0xFF00796B)),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                factCheck.claimUrl,
-                                style: const TextStyle(
-                                  color: Color(0xFF00796B),
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const Icon(Icons.chevron_right_rounded, size: 18, color: Color(0xFF00796B)),
-                          ],
-                        ),
-                      ),
                     ),
-                  ],
+                    child: Row(
+                      children: const [
+                        Icon(
+                          Icons.library_books_outlined,
+                          size: 16,
+                          color: Color(0xFF00796B),
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Archived from PUBHEALTH Dataset',
+                            style: TextStyle(
+                              color: Color(0xFF00796B),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
