@@ -2,12 +2,15 @@ import os
 import re
 import json
 import time
+import inspect
 import asyncio
 from typing import TypedDict, List, Dict, Any, Optional
 import asyncpg
 from llama_cpp import Llama, LlamaGrammar
 from langgraph.graph import StateGraph, START, END
 from sentence_transformers import SentenceTransformer
+from google import genai
+from google.genai.errors import ClientError, APIError
 
 from app.core.config import settings
 from app.agent.database import query_medical_metrics_async, hybrid_search_fallback_async
@@ -15,9 +18,8 @@ from app.agent.grammar import JSON_GRAMMAR
 
 
 # ====================================================================
-# 1. 載入模型
+# 1. 載入模型與 Gemini Client 初始化
 # ====================================================================
-# 退兩層: /app/agent/graph.py -> /app/agent -> /app
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_PATH = os.path.join(BASE_DIR, "model", settings.LLM_MODEL_FILE)
 
@@ -34,6 +36,11 @@ llm = Llama(
 print(f"[Startup] Loading SentenceTransformer embedding model ({settings.EMBEDDING_MODEL_NAME})...")
 embed_model = SentenceTransformer(settings.EMBEDDING_MODEL_NAME)
 
+# 讀取並配置 Gemini Client
+raw_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or ""
+gemini_api_key = raw_key.strip().strip('"\'')
+gemini_client = genai.Client(api_key=gemini_api_key) if gemini_api_key else None
+
 llm_lock = asyncio.Lock()
 
 # ====================================================================
@@ -43,6 +50,7 @@ class AgentState(TypedDict, total=False):
     clinical_text: str             # 原始輸入病歷
     extracted_metrics: List[str]   # 大腦抓出的指標
     rag_data: Dict[str, Any]       # PostgreSQL 撈出的正常值與定義
+    clinical_synthesis: str        # Gemini 臨床生成解讀 (A+G 產物)
     final_analysis: Dict[str, Any] # 最終比對報告
     retry_count: int               # 重試次數
     json_valid: bool               # 標記 JSON 是否解析成功
@@ -221,9 +229,71 @@ async def query_database_node(state: AgentState) -> Dict[str, Any]:
         
     return {"rag_data": rag_results}
 
-def analyze_and_compare_node(state: AgentState) -> Dict[str, Any]:
-    print("\n [Node 3] Assembling final RAG + Agent structured report...")
+# ====================================================================
+# 3. Augmentation & Generation 節點 (RAG 的 A 與 G)
+# ====================================================================
+async def clinical_synthesis_node(state: AgentState) -> Dict[str, Any]:
+    print("\n [Node 3] Performing RAG Augmentation & Generation (Gemini Clinical Synthesis)...")
+    clinical_text = state.get("clinical_text", "").strip()
     rag_data = state.get("rag_data", {})
+    
+    if not rag_data or not gemini_client:
+        print("  └─ No retrieved metrics or Gemini client not ready. Skipping clinical generation.")
+        return {"clinical_synthesis": ""}
+
+    # 1. Augmentation (增強上下文拼接)
+    metrics_benchmarks = []
+    for name, info in rag_data.items():
+        ref_range = f"{info.get('lower', 'N/A')} - {info.get('upper', 'N/A')} {info.get('unit', '')}"
+        desc = info.get('definition', '')[:120]
+        metrics_benchmarks.append(f"- {name}: Normal Range ({ref_range}), Clinical Role: {desc}")
+    
+    context_str = "\n".join(metrics_benchmarks)
+
+    prompt = inspect.cleandoc(f"""
+    You are an expert clinical decision support assistant. Explain why the following lab tests were ordered for this specific clinical case and provide concise diagnostic insights.
+
+    ### CLINICAL CASE / NOTE:
+    "{clinical_text}"
+
+    ### RETRIEVED LAB BENCHMARKS & CONTEXT:
+    {context_str}
+
+    ### REQUIREMENTS:
+    1. Explain the clinical correlation between the patient's symptoms (e.g. fever, acute presentation) and these specific lab metrics.
+    2. Briefly mention key risks or what abnormal findings would indicate in this context.
+    3. Keep the tone concise, objective, and professional (around 80-120 words).
+    """)
+
+    # 2. Generation (呼叫 Gemini 生成，含 429 容錯備援)
+    candidate_models = ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-2.5-flash"]
+    synthesis_result = ""
+
+    for model_name in candidate_models:
+        try:
+            response = await asyncio.to_thread(
+                lambda m=model_name: gemini_client.models.generate_content(
+                    model=m,
+                    contents=prompt
+                )
+            )
+            if response and response.text:
+                synthesis_result = response.text.strip()
+                print(f"  └─ Successfully generated synthesis with {model_name}.")
+                break
+        except (ClientError, APIError) as e:
+            if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                print(f"  └─ Model {model_name} quota exhausted (429). Retrying next model...")
+                continue
+        except Exception as e:
+            print(f"  └─ Synthesis failed on {model_name}: {e}")
+
+    return {"clinical_synthesis": synthesis_result}
+
+def analyze_and_compare_node(state: AgentState) -> Dict[str, Any]:
+    print("\n [Node 4] Assembling final RAG + Agent structured report...")
+    rag_data = state.get("rag_data", {})
+    synthesis = state.get("clinical_synthesis", "")
     retry_count = state.get("retry_count", 1)
     
     status_str = "security_blocked" if retry_count == 99 else ("success" if rag_data else "no_metrics_found")
@@ -231,16 +301,21 @@ def analyze_and_compare_node(state: AgentState) -> Dict[str, Any]:
     analysis = {
         "status": status_str,
         "detected_metrics_count": len(rag_data),
+        "clinical_synthesis": synthesis, # 注入 AI 生成解讀
         "metrics_reference": rag_data,
         "total_attempts_used": 0 if retry_count == 99 else retry_count
     }
     return {"final_analysis": analysis}
 
+# ====================================================================
+# 4. 構建狀態圖 (請確保節點與 Edge 都有連到 synthesis)
+# ====================================================================
 workflow = StateGraph(AgentState)
 
 workflow.add_node("guardrail", guardrail_node)
 workflow.add_node("extract_metrics", extract_metrics_node)
 workflow.add_node("query_database", query_database_node)
+workflow.add_node("synthesis", clinical_synthesis_node)         # 1. 確保有註冊 synthesis 節點
 workflow.add_node("analyze_compare", analyze_and_compare_node)
 
 workflow.add_edge(START, "guardrail")
@@ -255,7 +330,10 @@ workflow.add_conditional_edges(
     }
 )
 
-workflow.add_edge("query_database", "analyze_compare")
+# ⚠️ 注意這裡：舊的是 query_database -> analyze_compare
+# 必須改成：query_database -> synthesis -> analyze_compare
+workflow.add_edge("query_database", "synthesis")                # 2. 檢索完接 synthesis
+workflow.add_edge("synthesis", "analyze_compare")               # 3. synthesis 完再接組裝報告
 workflow.add_edge("analyze_compare", END)
 
 app = workflow.compile()

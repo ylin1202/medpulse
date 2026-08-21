@@ -24,18 +24,35 @@ async def factcheck_endpoint(
     
     result = await factcheck_service.search(user_query, db_pool, correlation_id=correlation_id)
     
-    if not result.get("found"):
+    if not result or not result.get("found"):
+        logger.warning(f"[{correlation_id}] No factcheck match found.")
         return FactCheckResponse(status="success", data=[])
 
+    data_list = result.get("data", [])
+    if not data_list:
+        logger.warning(f"[{correlation_id}] Result data list is empty.")
+        return FactCheckResponse(status="success", data=[])
+    
+    item_dict = data_list[0]
+
     formatted_item = FactCheckItem(
-        id=correlation_id,
-        claim=result.get("matched_claim"),
-        verdict=result.get("verdict"),
-        summary=result.get("explanation", "")[:120] + "...",
-        explanation=result.get("explanation"),
-        source="Medical Fact-Check Center",
-        claim_url=result.get("source_url", ""),
-        score=result.get("similarity_score")
+        id=item_dict.get("id") or correlation_id,
+        claim=item_dict.get("matched_claim") or item_dict.get("claim"),
+        verdict=item_dict.get("verdict"),
+        summary=item_dict.get("summary"),
+        explanation=item_dict.get("explanation"),                      # AI 摘要
+        original_explanation=item_dict.get("original_explanation"),    # 原始資料庫文本
+        source=item_dict.get("source") or "PUBHEALTH Dataset",
+        claim_url=item_dict.get("claim_url", ""),
+        score=item_dict.get("score")
+    )
+
+    # 在這裡印出完整回傳內容到 Docker Log
+    logger.info(
+        f"[{correlation_id}] Response payload -> "
+        f"Claim: '{formatted_item.claim}', "
+        f"Verdict: '{formatted_item.verdict}', "
+        f"AI Explanation: '{formatted_item.explanation}'"
     )
 
     return FactCheckResponse(status="success", data=[formatted_item])
