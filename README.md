@@ -1,6 +1,6 @@
 # MedPulse
 
-This project is a full-stack Clinical Decision Support System (CDSS) and multi-modal medical health information retrieval platform. The system uses a modern distributed microservices architecture: a Flutter frontend, and a dual-core backend consisting of FastAPI (a LangGraph + Gemma-3 + Gemini dual-RAG inference engine) and Flask (core business logic, JWT authentication, and the drug/pharmacy data gateway), combined with PostgreSQL (PostGIS + pgvector vector database) and Redis for distributed caching and state management. It natively implements constrained JSON decoding on a locally fine-tuned Gemma model, dense + sparse dual-path retrieval with Reciprocal Rank Fusion (RRF Hybrid Search), semantic fact-checking retrieval over the PUBHEALTH dataset, card-based rendering of OpenFDA drug monographs, native marker clustering for Taiwan-wide NHI-contracted pharmacies, and strict medical-education and physiological safety guardrails (negative constraints) at the generation layer.
+This project is a full-stack Clinical Decision Support System and multi-modal medical health information retrieval platform. The system uses a modern distributed microservices architecture: a Flutter frontend, and a dual-core backend consisting of FastAPI (a LangGraph + Gemma-3 + Gemini dual-RAG inference engine) and Flask (core business logic, JWT authentication, and the drug/pharmacy data gateway), combined with PostgreSQL (pgvector vector database) and Redis for distributed caching and state management. It natively implements constrained JSON decoding on a locally fine-tuned Gemma model, dense + sparse dual-path retrieval with Reciprocal Rank Fusion (RRF Hybrid Search), semantic fact-checking retrieval over the PUBHEALTH dataset, card-based rendering of OpenFDA drug monographs, native marker clustering for Taiwan-wide NHI-contracted pharmacies, and strict medical-education and physiological safety guardrails (negative constraints) at the generation layer.
 
 ## Highlights
 
@@ -69,7 +69,7 @@ This project is a full-stack Clinical Decision Support System (CDSS) and multi-m
         | • medical_metrics (MIMIC-IV Reference Ranges, Units & Definitions)                    |
         | • factcheck_vectors (PUBHEALTH Claims, Embeddings, IVFFlat / HNSW Index)              |
         | • drugs & user_favorites (OpenFDA Package Inserts, User Bookmarks with FK Cascades)   |
-        | • pharmacies & users (Spatial Coordinates, Password Hashes & Verification Status)    |
+        | • pharmacies & users (Spatial Coordinates, Password Hashes & Verification Status)     |
         +---------------------------------------------------------------------------------------+
 ```
 
